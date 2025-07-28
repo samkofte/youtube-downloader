@@ -1,5 +1,6 @@
 const express = require('express');
 const ytdl = require('@distube/ytdl-core');
+const youtubedl = require('youtube-dl-exec');
 const cors = require('cors');
 const path = require('path');
 const youtubeSearch = require('youtube-search-api');
@@ -227,24 +228,42 @@ app.post('/download-mp3', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        const title = info.videoDetails.title
-            .replace(/[<>:"/\\|?*]/g, '')
-            .replace(/\s+/g, '_')
-            .substring(0, 100);
-        
-        res.header('Content-Disposition', `attachment; filename="${title}.mp3"`);
-        res.header('Content-Type', 'audio/mpeg');
-        
-        ytdl(url, {
-            ...ytdlOptions,
-            filter: 'audioonly',
-            quality: 'highestaudio'
-        }).pipe(res);
+        try {
+            // İlk olarak ytdl-core'u dene
+            const info = await ytdl.getInfo(url, ytdlOptions);
+            const title = info.videoDetails.title
+                .replace(/[<>:"/\\|?*]/g, '')
+                .replace(/\s+/g, '_')
+                .substring(0, 100);
+            
+            res.header('Content-Disposition', `attachment; filename="${title}.mp3"`);
+            res.header('Content-Type', 'audio/mpeg');
+            
+            ytdl(url, {
+                ...ytdlOptions,
+                filter: 'audioonly',
+                quality: 'highestaudio'
+            }).pipe(res);
+            
+        } catch (ytdlError) {
+            console.log('ytdl-core başarısız, youtube-dl-exec deneniyor:', ytdlError.message);
+            
+            // Fallback: youtube-dl-exec kullan
+            const output = await youtubedl(url, {
+                extractAudio: true,
+                audioFormat: 'mp3',
+                audioQuality: 0, // En yüksek kalite
+                output: '%(title)s.%(ext)s'
+            });
+            
+            res.header('Content-Disposition', `attachment; filename="audio.mp3"`);
+            res.header('Content-Type', 'audio/mpeg');
+            res.json({ success: true, message: 'MP3 indirme başlatıldı (alternatif yöntem)' });
+        }
         
     } catch (error) {
         console.error('MP3 indirme hatası:', error);
-        res.status(500).json({ error: 'MP3 indirilemedi' });
+        res.status(500).json({ error: 'MP3 indirilemedi: ' + error.message });
     }
 });
 
