@@ -3,6 +3,32 @@ const ytdl = require('@distube/ytdl-core');
 const cors = require('cors');
 const path = require('path');
 const youtubeSearch = require('youtube-search-api');
+const { CookieJar } = require('tough-cookie');
+
+// YouTube bot korumasını aşmak için gelişmiş agent ayarları
+const cookieJar = new CookieJar();
+const agent = ytdl.createAgent(cookieJar, {
+    localAddress: undefined,
+    family: 0,
+    hints: 0,
+    lookup: undefined
+});
+
+// Ek ytdl seçenekleri
+const ytdlOptions = {
+    agent: agent,
+    requestOptions: {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+    }
+};
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -123,7 +149,7 @@ app.post('/info', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
         
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         const videoDetails = {
             title: info.videoDetails.title,
             thumbnail: info.videoDetails.thumbnails[0]?.url,
@@ -201,7 +227,7 @@ app.post('/download-mp3', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         const title = info.videoDetails.title
             .replace(/[<>:"/\\|?*]/g, '')
             .replace(/\s+/g, '_')
@@ -211,6 +237,7 @@ app.post('/download-mp3', async (req, res) => {
         res.header('Content-Type', 'audio/mpeg');
         
         ytdl(url, {
+            ...ytdlOptions,
             filter: 'audioonly',
             quality: 'highestaudio'
         }).pipe(res);
@@ -230,7 +257,7 @@ app.post('/download-mp4', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         const title = info.videoDetails.title
             .replace(/[<>:"/\\|?*]/g, '')
             .replace(/\s+/g, '_')
@@ -268,6 +295,7 @@ app.post('/download-mp4', async (req, res) => {
             };
         }
         
+        downloadOptions = { ...ytdlOptions, ...downloadOptions };
         ytdl(url, downloadOptions).pipe(res);
         
     } catch (error) {
@@ -289,7 +317,7 @@ app.post('/api/video-info', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         const videoDetails = {
             title: info.videoDetails.title,
             thumbnail: info.videoDetails.thumbnails[0]?.url,
@@ -314,7 +342,7 @@ app.post('/api/download-mp3', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         // Türkçe karakterleri destekleyen dosya adı temizleme
         const title = info.videoDetails.title
             .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
@@ -325,6 +353,7 @@ app.post('/api/download-mp3', async (req, res) => {
         res.header('Content-Type', 'audio/mpeg');
         
         ytdl(url, {
+            ...ytdlOptions,
             filter: 'audioonly',
             quality: 'highestaudio'
         }).pipe(res);
@@ -344,7 +373,7 @@ app.post('/api/download-mp4', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, { agent });
         // Türkçe karakterleri destekleyen dosya adı temizleme
         const title = info.videoDetails.title
             .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
@@ -404,7 +433,7 @@ app.post('/api/formats', async (req, res) => {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url);
+        const info = await ytdl.getInfo(url, ytdlOptions);
         const formats = info.formats
             .filter(format => format.hasVideo && format.hasAudio)
             .map(format => ({
