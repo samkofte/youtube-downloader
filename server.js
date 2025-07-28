@@ -7,7 +7,7 @@ const { CookieJar } = require('tough-cookie');
 
 // YouTube bot korumasını aşmak için gelişmiş agent ayarları
 const cookieJar = new CookieJar();
-const agent = ytdl.createAgent(cookieJar, {
+const agent = ytdl.createAgent([], {
     localAddress: undefined,
     family: 0,
     hints: 0,
