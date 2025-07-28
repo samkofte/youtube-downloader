@@ -1,22 +1,78 @@
-<div align="center">
-  <h1>🎵 YouTube MP3/MP4 İndirici</h1>
-  <p><strong>Modern, hızlı ve kullanıcı dostu YouTube video indirme uygulaması</strong></p>
-  
-  <p>
-    <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js">
-    <img src="https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express.js">
-    <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript">
-    <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5">
-    <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3">
-  </p>
-  
-  <p>
-    <img src="https://img.shields.io/github/license/samkofte/youtube-api-js?style=flat-square" alt="License">
-    <img src="https://img.shields.io/github/stars/samkofte/youtube-api-js?style=flat-square" alt="Stars">
-    <img src="https://img.shields.io/github/forks/samkofte/youtube-api-js?style=flat-square" alt="Forks">
-    <img src="https://img.shields.io/github/issues/samkofte/youtube-api-js?style=flat-square" alt="Issues">
-  </p>
-</div>
+# YouTube Downloader API
+
+A simple YouTube downloader API built with Node.js and Express.
+
+## Features
+
+- Search YouTube videos
+- Get trending videos
+- Download MP3 audio files
+- Download MP4 video files
+- Get video information
+- Search suggestions
+
+## Local Development
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start the server:
+```bash
+npm start
+```
+
+The API will be available at `http://localhost:3001`
+
+## Deploy to Render.com
+
+### Method 1: Using render.yaml (Recommended)
+
+1. Fork or clone this repository to your GitHub account
+2. Go to [Render.com](https://render.com) and sign up/login
+3. Click "New" → "Web Service"
+4. Connect your GitHub repository
+5. Render will automatically detect the `render.yaml` file and configure the service
+6. Click "Create Web Service"
+
+### Method 2: Manual Setup
+
+1. Go to [Render.com](https://render.com) and sign up/login
+2. Click "New" → "Web Service"
+3. Connect your GitHub repository
+4. Configure the following settings:
+   - **Name**: youtube-api (or any name you prefer)
+   - **Environment**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Plan**: Free (or choose your preferred plan)
+5. Add environment variables (optional):
+   - `NODE_ENV`: production
+6. Click "Create Web Service"
+
+### Environment Variables
+
+The following environment variables are supported:
+- `PORT`: Server port (automatically set by Render)
+- `NODE_ENV`: Environment mode (development/production)
+
+## API Endpoints
+
+- `GET /health` - Health check
+- `GET /trending` - Get trending videos
+- `GET /search?q=query` - Search videos
+- `POST /info` - Get video information
+- `GET /suggestions?q=query` - Get search suggestions
+- `POST /download-mp3` - Download MP3
+- `POST /download-mp4` - Download MP4
+
+## Dependencies
+
+- express: Web framework
+- @distube/ytdl-core: YouTube downloader
+- cors: Cross-origin resource sharing
+- youtube-search-api: YouTube search functionality
 
 ---
 
