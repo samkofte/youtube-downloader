@@ -53,7 +53,7 @@ A modern, feature-rich YouTube downloader application built with Flutter and Nod
    npm start
    ```
 
-4. **Set up Flutter app** (optional)
+4. **Set up Flutter mobile app**
    ```bash
    cd youtube_downloader_new
    flutter pub get
@@ -148,12 +148,21 @@ youtube-downloader/
 │   ├── script.js             # JavaScript functionality
 │   └── style.css             # Styling
 ├── 📁 youtube_downloader_new/ # Flutter mobile app
-│   ├── 📁 lib/
-│   │   ├── 📁 models/         # Data models
-│   │   ├── 📁 providers/      # State management
-│   │   ├── 📁 screens/        # UI screens
-│   │   ├── 📁 services/       # API services
-│   │   └── 📁 widgets/        # Reusable components
+│   ├── 📁 android/           # Android platform files
+│   ├── 📁 ios/               # iOS platform files
+│   ├── 📁 lib/               # Main Flutter source code
+│   │   ├── 📁 models/        # Data models (video_model.dart, download_item.dart)
+│   │   ├── 📁 providers/     # State management (youtube_provider.dart, download_provider.dart)
+│   │   ├── 📁 screens/       # UI screens (home_screen.dart, downloads_screen.dart)
+│   │   ├── 📁 services/      # API services (youtube_service.dart)
+│   │   ├── 📁 utils/         # Utilities (theme.dart)
+│   │   ├── 📁 widgets/       # Reusable components (video_card.dart, search_bar_widget.dart)
+│   │   └── main.dart         # App entry point
+│   ├── 📁 assets/            # Images and icons
+│   ├── 📁 web/               # Web platform files
+│   ├── 📁 windows/           # Windows platform files
+│   ├── 📁 linux/             # Linux platform files
+│   ├── 📁 macos/             # macOS platform files
 │   └── pubspec.yaml          # Flutter dependencies
 ├── server.js                 # Main server file
 ├── package.json              # Node.js dependencies
@@ -170,10 +179,22 @@ MAX_FILE_SIZE=100MB          # Maximum file size
 ```
 
 ### Flutter Configuration
-Update `lib/services/youtube_service.dart` with your server URL:
+Update `youtube_downloader_new/lib/services/youtube_service.dart` with your server URL:
 ```dart
 static const String baseUrl = 'http://your-server-url:3000';
 ```
+
+### Flutter Development Setup
+1. **Install Flutter SDK** from [flutter.dev](https://flutter.dev/docs/get-started/install)
+2. **Install Android Studio** or **Xcode** for mobile development
+3. **Enable developer mode** on your Android device or use iOS simulator
+4. **Run the app**:
+   ```bash
+   cd youtube_downloader_new
+   flutter doctor          # Check Flutter installation
+   flutter devices         # List available devices
+   flutter run             # Run on connected device
+   ```
 
 ## 🚨 Troubleshooting
 
