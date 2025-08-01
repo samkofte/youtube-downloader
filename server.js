@@ -219,8 +219,8 @@ app.get('/suggestions', async (req, res) => {
     }
 });
 
-// Download MP3 endpoint
-app.post('/download-mp3', async (req, res) => {
+// Get video info for download (Flutter will handle actual download)
+app.post('/video-info', async (req, res) => {
     try {
         const { url } = req.body;
         
@@ -229,42 +229,44 @@ app.post('/download-mp3', async (req, res) => {
         }
 
         try {
-            // İlk olarak ytdl-core'u dene
+            // Video bilgilerini al
             const info = await ytdl.getInfo(url, ytdlOptions);
-            const title = info.videoDetails.title
-                .replace(/[<>:"/\\|?*]/g, '')
-                .replace(/\s+/g, '_')
-                .substring(0, 100);
+            const videoDetails = {
+                title: info.videoDetails.title,
+                duration: info.videoDetails.lengthSeconds,
+                thumbnail: info.videoDetails.thumbnails[0]?.url,
+                author: info.videoDetails.author.name,
+                viewCount: info.videoDetails.viewCount,
+                uploadDate: info.videoDetails.uploadDate,
+                description: info.videoDetails.description?.substring(0, 500),
+                videoId: info.videoDetails.videoId,
+                url: url,
+                available: true
+            };
             
-            res.header('Content-Disposition', `attachment; filename="${title}.mp3"`);
-            res.header('Content-Type', 'audio/mpeg');
-            
-            ytdl(url, {
-                ...ytdlOptions,
-                filter: 'audioonly',
-                quality: 'highestaudio'
-            }).pipe(res);
+            res.json({ success: true, videoInfo: videoDetails });
             
         } catch (ytdlError) {
-            console.log('ytdl-core başarısız, youtube-dl-exec deneniyor:', ytdlError.message);
-            
-            // Fallback: youtube-dl-exec kullan
-            const output = await youtubedl(url, {
-                extractAudio: true,
-                audioFormat: 'mp3',
-                audioQuality: 0, // En yüksek kalite
-                output: '%(title)s.%(ext)s'
+            console.log('Video bilgisi alınamadı:', ytdlError.message);
+            res.status(404).json({ 
+                error: 'Video bilgisi alınamadı', 
+                message: 'Video mevcut değil veya erişilemiyor',
+                available: false 
             });
-            
-            res.header('Content-Disposition', `attachment; filename="audio.mp3"`);
-            res.header('Content-Type', 'audio/mpeg');
-            res.json({ success: true, message: 'MP3 indirme başlatıldı (alternatif yöntem)' });
         }
         
     } catch (error) {
-        console.error('MP3 indirme hatası:', error);
-        res.status(500).json({ error: 'MP3 indirilemedi: ' + error.message });
+        console.error('Video info hatası:', error);
+        res.status(500).json({ error: 'Video bilgisi alınamadı: ' + error.message });
     }
+});
+
+// Download MP3 endpoint (deprecated - use Flutter download)
+app.post('/download-mp3', async (req, res) => {
+    res.status(410).json({ 
+        error: 'Bu endpoint artık kullanılmıyor', 
+        message: 'Lütfen /video-info endpoint\'ini kullanın ve indirme işlemini Flutter tarafında yapın' 
+    });
 });
 
 // Download MP4 endpoint
