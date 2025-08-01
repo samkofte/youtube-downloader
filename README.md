@@ -1,558 +1,251 @@
-# YouTube Downloader API
+# 🎵 YouTube Downloader
 
-A simple YouTube downloader API built with Node.js and Express.
+A modern, feature-rich YouTube downloader application built with Flutter and Node.js. Download your favorite YouTube videos as MP3 audio files or MP4 video files with ease.
 
-## Features
+## ✨ Features
 
-- Search YouTube videos
-- Get trending videos
-- Download MP3 audio files
-- Download MP4 video files
-- Get video information
-- Search suggestions
+### 🎵 Audio Downloads
+- **High-Quality MP3**: Download YouTube videos as high-quality MP3 audio files
+- **Fast Processing**: Optimized download speeds with progress tracking
+- **Metadata Preservation**: Maintains video title and thumbnail information
 
-## Local Development
+### 🎬 Video Downloads
+- **Multiple Quality Options**: Choose from various video quality settings (360p, 480p, 720p, 1080p)
+- **MP4 Format**: Universal compatibility with all devices and players
+- **Smart Quality Selection**: Automatic best quality detection
 
-1. Install dependencies:
-```bash
-npm install
-```
+### 📱 Mobile App Features
+- **Cross-Platform**: Built with Flutter for Android and iOS
+- **Modern UI**: Clean, intuitive interface with Material Design
+- **Real-Time Progress**: Live download progress with percentage indicators
+- **Download Management**: View, organize, and manage your downloaded files
+- **Search Integration**: Built-in YouTube search functionality
+- **Trending Videos**: Discover popular content
 
-2. Start the server:
-```bash
-npm start
-```
+### 🌐 Web Interface
+- **Responsive Design**: Works perfectly on desktop and mobile browsers
+- **Direct URL Support**: Paste any YouTube URL for instant download
+- **Search & Download**: Search for videos and download directly
+- **No Installation Required**: Use directly in your web browser
 
-The API will be available at `http://localhost:3001`
+## 🚀 Quick Start
 
-## Deploy to Render.com
+### Prerequisites
+- Node.js (v14 or higher)
+- Flutter SDK (v3.10 or higher)
+- Android Studio / Xcode (for mobile development)
 
-### Method 1: Using render.yaml (Recommended)
+### Installation
 
-1. Fork or clone this repository to your GitHub account
-2. Go to [Render.com](https://render.com) and sign up/login
-3. Click "New" → "Web Service"
-4. Connect your GitHub repository
-5. Render will automatically detect the `render.yaml` file and configure the service
-6. Click "Create Web Service"
-
-### Method 2: Manual Setup
-
-1. Go to [Render.com](https://render.com) and sign up/login
-2. Click "New" → "Web Service"
-3. Connect your GitHub repository
-4. Configure the following settings:
-   - **Name**: youtube-api (or any name you prefer)
-   - **Environment**: Node
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-   - **Plan**: Free (or choose your preferred plan)
-5. Add environment variables (optional):
-   - `NODE_ENV`: production
-6. Click "Create Web Service"
-
-### Environment Variables
-
-The following environment variables are supported:
-- `PORT`: Server port (automatically set by Render)
-- `NODE_ENV`: Environment mode (development/production)
-
-## API Endpoints
-
-- `GET /health` - Health check
-- `GET /trending` - Get trending videos
-- `GET /search?q=query` - Search videos
-- `POST /info` - Get video information
-- `GET /suggestions?q=query` - Get search suggestions
-- `POST /download-mp3` - Download MP3
-- `POST /download-mp4` - Download MP4
-
-## Dependencies
-
-- express: Web framework
-- @distube/ytdl-core: YouTube downloader
-- cors: Cross-origin resource sharing
-- youtube-search-api: YouTube search functionality
-
----
-
-## 📋 İçindekiler
-
-- [✨ Özellikler](#-özellikler)
-- [🚀 Hızlı Başlangıç](#-hızlı-başlangıç)
-- [📦 Kurulum](#-kurulum)
-- [🎯 Kullanım](#-kullanım)
-- [🔧 API Dokümantasyonu](#-api-dokümantasyonu)
-- [🏗️ Proje Yapısı](#️-proje-yapısı)
-- [🛠️ Teknolojiler](#️-teknolojiler)
-- [📸 Ekran Görüntüleri](#-ekran-görüntüleri)
-- [🤝 Katkıda Bulunma](#-katkıda-bulunma)
-- [⚠️ Yasal Uyarılar](#️-yasal-uyarılar)
-- [🐛 Sorun Giderme](#-sorun-giderme)
-- [📄 Lisans](#-lisans)
-
-## ✨ Özellikler
-
-<table>
-  <tr>
-    <td>🎵</td>
-    <td><strong>MP3 İndirme</strong></td>
-    <td>YouTube videolarını yüksek kaliteli ses dosyası olarak indirin</td>
-  </tr>
-  <tr>
-    <td>🎬</td>
-    <td><strong>MP4 İndirme</strong></td>
-    <td>Farklı kalite seçenekleriyle (720p, 480p, 360p) video indirme</td>
-  </tr>
-  <tr>
-    <td>🔍</td>
-    <td><strong>Video Arama</strong></td>
-    <td>YouTube'da video arayın ve doğrudan indirin</td>
-  </tr>
-  <tr>
-    <td>📱</td>
-    <td><strong>Responsive Tasarım</strong></td>
-    <td>Mobil, tablet ve masaüstü cihazlarda mükemmel çalışır</td>
-  </tr>
-  <tr>
-    <td>⚡</td>
-    <td><strong>Hızlı İndirme</strong></td>
-    <td>ytdl-core kütüphanesi ile optimize edilmiş indirme performansı</td>
-  </tr>
-  <tr>
-    <td>🎨</td>
-    <td><strong>Modern UI</strong></td>
-    <td>Kullanıcı dostu, şık ve sezgisel arayüz</td>
-  </tr>
-  <tr>
-    <td>📊</td>
-    <td><strong>Detaylı Bilgiler</strong></td>
-    <td>Video thumbnail, başlık, süre, görüntülenme sayısı ve kanal bilgileri</td>
-  </tr>
-  <tr>
-    <td>🔄</td>
-    <td><strong>Progress Bar</strong></td>
-    <td>İndirme ilerlemesini takip edin</td>
-  </tr>
-  <tr>
-    <td>🌍</td>
-    <td><strong>Türkçe Destek</strong></td>
-    <td>Türkçe karakterleri destekleyen dosya adlandırma</td>
-  </tr>
-</table>
-
-## 🚀 Hızlı Başlangıç
-
-```bash
-# Repository'yi klonlayın
-git clone https://github.com/samkofte/youtube-api-js.git
-
-# Proje dizinine gidin
-cd youtube-api-js
-
-# Bağımlılıkları yükleyin
-npm install
-
-# Uygulamayı başlatın
-npm start
-
-# Tarayıcınızda açın
-# http://localhost:3001
-```
-
-## 📦 Kurulum
-
-### Gereksinimler
-
-- **Node.js** (v14.0.0 veya üzeri) - [İndir](https://nodejs.org/)
-- **npm** (Node.js ile birlikte gelir) veya **yarn**
-- **Git** (opsiyonel) - [İndir](https://git-scm.com/)
-
-### Detaylı Kurulum Adımları
-
-1. **Repository'yi klonlayın:**
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/samkofte/youtube-api-js.git
-   cd youtube-api-js
+   git clone https://github.com/samkofte/youtube-downloader.git
+   cd youtube-downloader
    ```
 
-2. **Bağımlılıkları yükleyin:**
+2. **Install server dependencies**
    ```bash
    npm install
-   # veya
-   yarn install
    ```
 
-3. **Uygulamayı başlatın:**
+3. **Start the server**
    ```bash
    npm start
-   # veya
-   yarn start
    ```
 
-4. **Tarayıcınızda açın:**
+4. **Set up Flutter app** (optional)
+   ```bash
+   cd youtube_downloader_new
+   flutter pub get
+   flutter run
    ```
-   http://localhost:3001
-   ```
 
-### Docker ile Kurulum (Opsiyonel)
+## 📖 Usage
 
-```bash
-# Docker image oluşturun
-docker build -t youtube-downloader .
+### Web Interface
+1. Open your browser and navigate to `http://localhost:3000`
+2. Enter a YouTube URL or search for videos
+3. Choose your preferred format (MP3/MP4) and quality
+4. Click download and wait for completion
 
-# Container'ı çalıştırın
-docker run -p 3001:3001 youtube-downloader
-```
+### Mobile App
+1. Launch the Flutter app on your device
+2. Use the search feature or paste a YouTube URL
+3. Select download format and quality
+4. Monitor progress in real-time
+5. Access downloaded files in the Downloads section
 
-## 🎯 Kullanım
+## 🛠️ API Endpoints
 
-### 1. URL ile İndirme
+### Video Information
+```http
+POST /api/video-info
+Content-Type: application/json
 
-1. **YouTube video URL'sini kopyalayın**
-   - Örnek: `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
-
-2. **URL'yi giriş alanına yapıştırın**
-
-3. **"Video Bilgisi Al" butonuna tıklayın**
-
-4. **İndirme formatını seçin:**
-   - **MP3 için**: "🎵 MP3 İndir" butonuna tıklayın
-   - **MP4 için**: Kalite seçin ve "🎬 MP4 İndir" butonuna tıklayın
-
-### 2. Arama ile İndirme
-
-1. **Arama kutusuna video adını yazın**
-
-2. **Arama sonuçlarından istediğiniz videoyu seçin**
-
-3. **Doğrudan MP3 veya MP4 butonlarına tıklayın**
-
-## 🔧 API Dokümantasyonu
-
-### Endpoints
-
-#### `POST /api/video-info`
-Video bilgilerini getirir.
-
-**Request:**
-```json
 {
   "url": "https://www.youtube.com/watch?v=VIDEO_ID"
 }
 ```
 
-**Response:**
-```json
-{
-  "title": "Video Başlığı",
-  "duration": "3:45",
-  "viewCount": "1,234,567",
-  "thumbnail": "https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg",
-  "channel": "Kanal Adı",
-  "formats": [
-    {
-      "quality": "720p",
-      "container": "mp4",
-      "size": "25.6 MB"
-    }
-  ]
-}
-```
+### Download MP3
+```http
+POST /api/download-mp3
+Content-Type: application/json
 
-#### `POST /api/download-mp3`
-MP3 formatında ses dosyası indirir.
-
-**Request:**
-```json
-{
-  "url": "https://www.youtube.com/watch?v=VIDEO_ID"
-}
-```
-
-#### `POST /api/download-mp4`
-MP4 formatında video dosyası indirir.
-
-**Request:**
-```json
 {
   "url": "https://www.youtube.com/watch?v=VIDEO_ID",
-  "quality": "720p"
+  "title": "Video Title"
 }
 ```
 
-#### `GET /api/search`
-YouTube'da video arar.
+### Download MP4
+```http
+POST /api/download-mp4
+Content-Type: application/json
 
-**Query Parameters:**
-- `q`: Arama terimi
-- `limit`: Sonuç sayısı (varsayılan: 10)
-
-**Response:**
-```json
 {
-  "results": [
-    {
-      "id": "VIDEO_ID",
-      "title": "Video Başlığı",
-      "channel": "Kanal Adı",
-      "duration": "3:45",
-      "viewCount": "1,234,567",
-      "thumbnail": "https://img.youtube.com/vi/VIDEO_ID/hqdefault.jpg",
-      "url": "https://www.youtube.com/watch?v=VIDEO_ID"
-    }
-  ]
+  "url": "https://www.youtube.com/watch?v=VIDEO_ID",
+  "quality": "720p",
+  "title": "Video Title"
 }
 ```
 
-## 🏗️ Proje Yapısı
-
-```
-youtube-api-js/
-├── 📁 public/                 # Frontend dosyaları
-│   ├── 📄 index.html         # Ana HTML dosyası
-│   ├── 🎨 style.css          # CSS stilleri
-│   └── ⚡ script.js          # Frontend JavaScript
-├── 📄 server.js              # Express sunucu
-├── 📦 package.json           # Proje bağımlılıkları
-├── 🔒 package-lock.json      # Bağımlılık kilidi
-├── 📖 README.md              # Proje dokümantasyonu
-└── 📄 .gitignore             # Git ignore dosyası
+### Search Videos
+```http
+GET /api/search?q=search_query&maxResults=10
 ```
 
-## 🛠️ Teknolojiler
+### Trending Videos
+```http
+GET /api/trending?maxResults=20
+```
 
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web framework
-- **ytdl-core** - YouTube video indirme
-- **youtube-search-api** - YouTube arama
-- **cors** - Cross-origin resource sharing
+## 🏗️ Architecture
 
-### Frontend
-- **Vanilla JavaScript** - Dinamik işlevsellik
-- **HTML5** - Yapısal markup
-- **CSS3** - Modern styling
-- **Flexbox/Grid** - Layout sistemi
-- **Font Awesome** - İkonlar
+### Backend (Node.js)
+- **Express.js**: Web server framework
+- **youtube-dl-exec**: YouTube video processing
+- **CORS**: Cross-origin resource sharing
+- **File System**: Download management
 
-### Geliştirme Araçları
-- **npm** - Paket yöneticisi
-- **Git** - Versiyon kontrolü
-- **GitHub** - Repository hosting
+### Frontend (Flutter)
+- **Provider**: State management
+- **HTTP**: API communication
+- **Path Provider**: File system access
+- **URL Launcher**: External link handling
 
-## 📸 Ekran Görüntüleri
+### Web Interface
+- **Vanilla JavaScript**: No framework dependencies
+- **Responsive CSS**: Mobile-first design
+- **Progressive Enhancement**: Works without JavaScript
 
-<div align="center">
-  <h3>🖥️ Ana Sayfa</h3>
-  <p><em>Modern ve kullanıcı dostu arayüz</em></p>
-  
-  <h3>🔍 Video Arama</h3>
-  <p><em>YouTube'da video arayın ve doğrudan indirin</em></p>
-  
-  <h3>📱 Mobil Görünüm</h3>
-  <p><em>Tüm cihazlarda mükemmel çalışır</em></p>
-</div>
+## 📁 Project Structure
 
-## 🤝 Katkıda Bulunma
+```
+youtube-downloader/
+├── 📁 public/                 # Web interface files
+│   ├── index.html            # Main web page
+│   ├── script.js             # JavaScript functionality
+│   └── style.css             # Styling
+├── 📁 youtube_downloader_new/ # Flutter mobile app
+│   ├── 📁 lib/
+│   │   ├── 📁 models/         # Data models
+│   │   ├── 📁 providers/      # State management
+│   │   ├── 📁 screens/        # UI screens
+│   │   ├── 📁 services/       # API services
+│   │   └── 📁 widgets/        # Reusable components
+│   └── pubspec.yaml          # Flutter dependencies
+├── server.js                 # Main server file
+├── package.json              # Node.js dependencies
+└── README.md                 # This file
+```
 
-Katkılarınızı memnuniyetle karşılıyoruz! İşte nasıl katkıda bulunabileceğiniz:
+## 🔧 Configuration
 
-### 1. Fork ve Clone
+### Environment Variables
 ```bash
-# Repository'yi fork edin (GitHub'da)
-git clone https://github.com/KULLANICI_ADINIZ/youtube-api-js.git
-cd youtube-api-js
+PORT=3000                    # Server port
+DOWNLOAD_PATH=./downloads    # Download directory
+MAX_FILE_SIZE=100MB          # Maximum file size
 ```
 
-### 2. Branch Oluşturun
-```bash
-git checkout -b feature/amazing-feature
+### Flutter Configuration
+Update `lib/services/youtube_service.dart` with your server URL:
+```dart
+static const String baseUrl = 'http://your-server-url:3000';
 ```
 
-### 3. Değişikliklerinizi Yapın
-- Kod yazın
-- Test edin
-- Dokümantasyonu güncelleyin
+## 🚨 Troubleshooting
 
-### 4. Commit ve Push
-```bash
-git add .
-git commit -m "feat: Add amazing feature"
-git push origin feature/amazing-feature
-```
+### Common Issues
 
-### 5. Pull Request Oluşturun
-- GitHub'da Pull Request açın
-- Değişikliklerinizi açıklayın
-- Review bekleyin
+**"Video information could not be retrieved"**
+- Check if the YouTube URL is valid
+- Ensure the video is public and not restricted
+- Verify internet connection
 
-### Katkı Kuralları
-- **Kod Stili**: Mevcut kod stilini takip edin
-- **Commit Mesajları**: [Conventional Commits](https://www.conventionalcommits.org/) formatını kullanın
-- **Testler**: Yeni özellikler için testler ekleyin
-- **Dokümantasyon**: README'yi güncel tutun
+**"Download failed"**
+- Check server logs for detailed error messages
+- Ensure sufficient disk space
+- Verify youtube-dl is up to date
 
-## ⚠️ Yasal Uyarılar
+**"Server connection failed"**
+- Confirm the server is running on the correct port
+- Check firewall settings
+- Verify network connectivity
 
-> **🚨 ÖNEMLİ UYARI**
-> 
-> Bu uygulama **sadece eğitim ve kişisel kullanım amaçlıdır**. Lütfen aşağıdaki kurallara uyun:
+### Performance Optimization
+- Use SSD storage for faster download processing
+- Increase server memory for handling multiple downloads
+- Configure CDN for better global performance
 
-- ✅ **Kendi içeriklerinizi** indirin
-- ✅ **Telif hakkı olmayan** içerikleri indirin
-- ✅ **Eğitim amaçlı** kullanın
-- ❌ **Telif hakkı korumalı** içerikleri ticari amaçla kullanmayın
-- ❌ **YouTube'un hizmet şartlarını** ihlal etmeyin
-- ❌ **Yasadışı** içerik dağıtımı yapmayın
+## 🤝 Contributing
 
-### Sorumluluk Reddi
+We welcome contributions! Please follow these steps:
 
-Bu yazılımın geliştiricileri, kullanıcıların bu uygulamayı kullanarak yaptığı herhangi bir yasal ihlalden sorumlu değildir. Kullanıcılar, indirdikleri içeriklerin kullanım haklarına sahip olduklarından emin olmalıdır.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 🐛 Sorun Giderme
+### Development Guidelines
+- Follow existing code style and conventions
+- Add tests for new features
+- Update documentation as needed
+- Ensure cross-platform compatibility
 
-### Yaygın Sorunlar ve Çözümleri
+## 📄 License
 
-<details>
-<summary><strong>❌ "Video bilgisi alınamadı" hatası</strong></summary>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-**Olası Nedenler:**
-- Geçersiz YouTube URL'si
-- Video özel veya kısıtlı
-- İnternet bağlantısı sorunu
-- YouTube'un API değişiklikleri
+## ⚖️ Legal Notice
 
-**Çözümler:**
-1. URL'nin doğru olduğundan emin olun
-2. Video'nun herkese açık olduğunu kontrol edin
-3. İnternet bağlantınızı test edin
-4. Farklı bir video deneyin
-</details>
+**Important**: This software is for educational and personal use only. Users are responsible for ensuring they have the right to download and use any content. The developers are not responsible for any legal issues arising from the use of this application.
 
-<details>
-<summary><strong>⬇️ İndirme başlamıyor</strong></summary>
+### Usage Guidelines
+- Only download content you have permission to use
+- Respect copyright laws and terms of service
+- Use downloaded content responsibly
+- Do not redistribute copyrighted material
 
-**Olası Nedenler:**
-- Tarayıcı pop-up engelleyicisi
-- JavaScript devre dışı
-- Ağ güvenlik duvarı
+## 🙏 Acknowledgments
 
-**Çözümler:**
-1. Pop-up engelleyicisini devre dışı bırakın
-2. JavaScript'in etkin olduğundan emin olun
-3. Farklı tarayıcı deneyin
-4. Güvenlik duvarı ayarlarını kontrol edin
-</details>
+- [youtube-dl](https://github.com/ytdl-org/youtube-dl) - Core download functionality
+- [Flutter](https://flutter.dev/) - Mobile app framework
+- [Express.js](https://expressjs.com/) - Web server framework
+- [Material Design](https://material.io/) - UI design system
 
-<details>
-<summary><strong>🚀 Sunucu başlatma hatası</strong></summary>
+## 📞 Support
 
-**Olası Nedenler:**
-- Port 3001 kullanımda
-- Node.js sürümü eski
-- Bağımlılıklar eksik
+If you encounter any issues or have questions:
 
-**Çözümler:**
-1. Port kullanımını kontrol edin: `netstat -an | findstr :3001`
-2. Node.js sürümünü güncelleyin
-3. Bağımlılıkları yeniden yükleyin: `npm install`
-4. Farklı port kullanın: `PORT=3002 npm start`
-</details>
-
-<details>
-<summary><strong>📱 Mobil cihazda çalışmıyor</strong></summary>
-
-**Çözümler:**
-1. Tarayıcıyı yenileyin
-2. Önbelleği temizleyin
-3. Farklı tarayıcı deneyin
-4. Cihazı yeniden başlatın
-</details>
-
-### Hata Raporlama
-
-Sorun yaşıyorsanız, lütfen [GitHub Issues](https://github.com/samkofte/youtube-api-js/issues) sayfasında yeni bir issue açın ve şu bilgileri ekleyin:
-
-- **İşletim Sistemi**: (Windows 10, macOS, Ubuntu, vb.)
-- **Tarayıcı**: (Chrome 91, Firefox 89, vb.)
-- **Node.js Sürümü**: `node --version`
-- **Hata Mesajı**: Tam hata mesajı
-- **Adımlar**: Hatayı yeniden oluşturma adımları
-
-## 📊 Performans
-
-- **İndirme Hızı**: Ağ bağlantınıza bağlı olarak optimize edilmiş
-- **Bellek Kullanımı**: Düşük bellek tüketimi
-- **CPU Kullanımı**: Verimli işlemci kullanımı
-- **Desteklenen Formatlar**: MP3 (128kbps-320kbps), MP4 (360p-1080p)
-
-## 🔄 Güncellemeler
-
-### v2.0.0 (Mevcut)
-- ✨ Video arama özelliği eklendi
-- 🎨 UI/UX iyileştirmeleri
-- 📱 Mobil responsive tasarım
-- 🔄 Progress bar eklendi
-- 🌍 Türkçe karakter desteği
-- 🐛 Bug düzeltmeleri
-
-### v1.0.0
-- 🎵 MP3 indirme
-- 🎬 MP4 indirme
-- 📊 Video bilgileri
-- 🎨 Temel UI
-
-## 📞 İletişim ve Destek
-
-- **GitHub Issues**: [Sorun Bildirin](https://github.com/samkofte/youtube-api-js/issues)
-- **GitHub Discussions**: [Tartışmalara Katılın](https://github.com/samkofte/youtube-api-js/discussions)
-- **Email**: [samkofte@example.com](mailto:samkofte@example.com)
-
-## 🌟 Teşekkürler
-
-Bu projeyi mümkün kılan açık kaynak kütüphanelere teşekkürler:
-
-- [ytdl-core](https://github.com/fent/node-ytdl-core) - YouTube video indirme
-- [youtube-search-api](https://github.com/vishaldev25/youtube-search-api) - YouTube arama
-- [Express.js](https://expressjs.com/) - Web framework
-- [Node.js](https://nodejs.org/) - JavaScript runtime
-
-## 📄 Lisans
-
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır.
-
-```
-MIT License
-
-Copyright (c) 2024 samkofte
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+- 🐛 [Report bugs](https://github.com/samkofte/youtube-downloader/issues)
+- 💡 [Request features](https://github.com/samkofte/youtube-downloader/issues)
+- 📧 Contact: [your-email@example.com]
 
 ---
 
 <div align="center">
-  <p><strong>⭐ Bu projeyi beğendiyseniz yıldız vermeyi unutmayın!</strong></p>
-  <p>Made with ❤️ by <a href="https://github.com/samkofte">samkofte</a></p>
-  
-  <p>
-    <a href="#top">🔝 Başa Dön</a>
-  </p>
+  <strong>Made with ❤️ by the YouTube Downloader Team</strong>
 </div>
