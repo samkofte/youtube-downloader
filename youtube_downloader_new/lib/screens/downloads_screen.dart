@@ -57,7 +57,8 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 onPressed: () => _showClearDialog(context),
                 tooltip: 'Tümünü Temizle',
               );
-            },
+            }
+            
           ),
         ],
       ),
@@ -328,10 +329,12 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 backgroundColor: Colors.green,
               ),
             );
+            }
           } else {
             // Fallback: Show file path and copy to clipboard
             await Clipboard.setData(ClipboardData(text: download.filePath));
-            ScaffoldMessenger.of(context).showSnackBar(
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
                   children: [

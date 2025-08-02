@@ -549,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  progress.status ?? 'İndiriliyor...',
+                  progress.status,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
