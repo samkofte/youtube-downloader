@@ -9,7 +9,7 @@ import '../models/download_item.dart';
 
 class YouTubeService {
   static String get baseUrl {
-    return 'https://youtube-downloader-fin5.onrender.com';
+    return 'https://youtube-downloader-5rl2.onrender.com';
   }
 
   static final YoutubeExplode _yt = YoutubeExplode();
