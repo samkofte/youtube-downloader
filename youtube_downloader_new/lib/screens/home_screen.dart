@@ -25,7 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Load popular music when app starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<YouTubeProvider>().searchVideos('popüler müzik 2024', maxResults: 20);
+      context
+          .read<YouTubeProvider>()
+          .searchVideos('popüler müzik 2024', maxResults: 20);
       context.read<DownloadProvider>().loadDownloads();
     });
   }
@@ -43,7 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _showSearchResults = false;
       });
       // Load popular music again when search is cleared
-      context.read<YouTubeProvider>().searchVideos('popüler müzik 2024', maxResults: 20);
+      context
+          .read<YouTubeProvider>()
+          .searchVideos('popüler müzik 2024', maxResults: 20);
     } else {
       setState(() {
         _showSearchResults = true;
@@ -130,7 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               context.read<YouTubeProvider>().refresh();
               if (!_showSearchResults) {
-                context.read<YouTubeProvider>().searchVideos('popüler müzik 2024', maxResults: 20);
+                context
+                    .read<YouTubeProvider>()
+                    .searchVideos('popüler müzik 2024', maxResults: 20);
               }
             },
             tooltip: 'Yenile',
@@ -171,11 +177,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.warning, color: Colors.orange, size: 20),
+                            const Icon(Icons.warning,
+                                color: Colors.orange, size: 20),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -196,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          
+
           // Content Section
           Expanded(
             child: Consumer<YouTubeProvider>(
@@ -207,10 +215,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     message: provider.error!,
                     onRetry: () {
                       provider.clearError();
-                      if (_showSearchResults && _searchController.text.isNotEmpty) {
+                      if (_showSearchResults &&
+                          _searchController.text.isNotEmpty) {
                         provider.searchVideos(_searchController.text);
                       } else {
-                        provider.searchVideos('popüler müzik 2024', maxResults: 20);
+                        provider.searchVideos('popüler müzik 2024',
+                            maxResults: 20);
                       }
                     },
                   );
@@ -235,12 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          _showSearchResults 
+                          _showSearchResults
                               ? 'Arama sonucu bulunamadı'
                               : 'Popüler müzikler yükleniyor...',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                         if (_showSearchResults) ...[
                           const SizedBox(height: 8),
@@ -263,30 +274,37 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Row(
                         children: [
                           Icon(
-                            _showSearchResults ? Icons.search : Icons.trending_up,
+                            _showSearchResults
+                                ? Icons.search
+                                : Icons.trending_up,
                             color: Theme.of(context).primaryColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            _showSearchResults 
+                            _showSearchResults
                                 ? 'Arama Sonuçları (${videos.length})'
                                 : 'Popüler Müzikler (${videos.length})',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                         ],
                       ),
                     ),
-                    
+
                     // Video List
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () async {
-                          if (_showSearchResults && _searchController.text.isNotEmpty) {
+                          if (_showSearchResults &&
+                              _searchController.text.isNotEmpty) {
                             await provider.searchVideos(_searchController.text);
                           } else {
-                            await provider.searchVideos('popüler müzik 2024', maxResults: 20);
+                            await provider.searchVideos('popüler müzik 2024',
+                                maxResults: 20);
                           }
                         },
                         child: ListView.builder(
@@ -344,7 +362,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Video info
             Row(
               children: [
@@ -386,18 +404,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Download options
             Text(
               'İndirme Seçenekleri',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
-            
+
             // MP3 Download
             SizedBox(
               width: double.infinity,
@@ -405,12 +423,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.pop(context);
                   context.read<YouTubeProvider>().downloadMp3(
-                    video.url, 
-                    video.title, 
-                    context.read<DownloadProvider>(),
-                    thumbnailUrl: video.thumbnail,
-                    duration: video.duration,
-                  );
+                        video.url,
+                        video.title,
+                        context.read<DownloadProvider>(),
+                        thumbnailUrl: video.thumbnail,
+                        duration: video.duration,
+                      );
                   _showDownloadProgress(context);
                 },
                 icon: const Icon(Icons.audiotrack),
@@ -420,9 +438,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // MP4 Download
             SizedBox(
               width: double.infinity,
@@ -430,13 +448,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   Navigator.pop(context);
                   context.read<YouTubeProvider>().downloadMp4(
-                    video.url, 
-                    '720p', 
-                    video.title, 
-                    context.read<DownloadProvider>(),
-                    thumbnailUrl: video.thumbnail,
-                    duration: video.duration,
-                  );
+                        video.url,
+                        '720p',
+                        video.title,
+                        context.read<DownloadProvider>(),
+                        thumbnailUrl: video.thumbnail,
+                        duration: video.duration,
+                      );
                   _showDownloadProgress(context);
                 },
                 icon: const Icon(Icons.videocam),
@@ -446,9 +464,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Cancel button
             SizedBox(
               width: double.infinity,
@@ -457,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Text('İptal'),
               ),
             ),
-            
+
             // Safe area padding
             SizedBox(height: MediaQuery.of(context).padding.bottom),
           ],
@@ -491,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               );
             }
-            
+
             // Check if download is completed
             if (progress.progress >= 1.0 && progress.error == null) {
               // Close dialog after a short delay
@@ -514,7 +532,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               });
             }
-            
+
             // Check if download failed
             if (progress.error != null) {
               Future.delayed(const Duration(milliseconds: 500), () {
@@ -538,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               });
             }
-            
+
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -556,9 +574,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   '${(progress.progress * 100).toInt()}%',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
                 ),
               ],
             );
@@ -568,7 +586,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Consumer<YouTubeProvider>(
             builder: (context, provider, child) {
               final progress = provider.downloadProgress;
-              if (progress != null && progress.progress < 1.0 && progress.error == null) {
+              if (progress != null &&
+                  progress.progress < 1.0 &&
+                  progress.error == null) {
                 return TextButton(
                   onPressed: () {
                     Navigator.pop(context);

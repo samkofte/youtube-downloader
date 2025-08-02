@@ -4,10 +4,8 @@ const youtubedl = require('youtube-dl-exec');
 const cors = require('cors');
 const path = require('path');
 const youtubeSearch = require('youtube-search-api');
-const { CookieJar } = require('tough-cookie');
 
 // YouTube bot korumasını aşmak için gelişmiş agent ayarları
-const cookieJar = new CookieJar();
 const agent = ytdl.createAgent([], {
     localAddress: undefined,
     family: 0,
