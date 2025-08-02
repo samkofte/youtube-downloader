@@ -9,11 +9,7 @@ import '../models/download_item.dart';
 
 class YouTubeService {
   static String get baseUrl {
-    if (Platform.isAndroid) {
-      return 'http://192.168.1.4:5000';
-    } else {
-      return 'http://127.0.0.1:5000';
-    }
+    return 'https://youtube-api-js-4htn.onrender.com';
   }
 
   static final YoutubeExplode _yt = YoutubeExplode();
