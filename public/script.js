@@ -83,10 +83,29 @@ class YouTubeDownloader {
         this.loadingSpinner.classList.add('hidden');
     }
 
-    showError(message) {
+    showError(message, type = 'error') {
         this.errorText.textContent = message;
         this.errorMessage.classList.remove('hidden');
+        
+        // Add success or error styling
+        if (type === 'success') {
+            this.errorMessage.style.backgroundColor = '#d4edda';
+            this.errorMessage.style.color = '#155724';
+            this.errorMessage.style.borderColor = '#c3e6cb';
+        } else {
+            this.errorMessage.style.backgroundColor = '#f8d7da';
+            this.errorMessage.style.color = '#721c24';
+            this.errorMessage.style.borderColor = '#f5c6cb';
+        }
+        
         this.hideLoading();
+        
+        // Auto hide success messages
+        if (type === 'success') {
+            setTimeout(() => {
+                this.hideError();
+            }, 5000);
+        }
     }
 
     hideError() {
@@ -277,7 +296,7 @@ class YouTubeDownloader {
         const progressInterval = this.showDownloadProgress('MP3');
 
         try {
-            const response = await fetch('/api/download-mp3', {
+            const response = await fetch('/download-mp3', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -285,30 +304,21 @@ class YouTubeDownloader {
                 body: JSON.stringify({ url: this.currentVideoUrl })
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'MP3 indirilemedi');
+                throw new Error(result.error || 'MP3 indirilemedi');
             }
 
             // Complete progress
             clearInterval(progressInterval);
             this.progressFill.style.width = '100%';
-            this.progressText.textContent = 'İndirme tamamlandı!';
-
-            // Create download link
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${this.videoTitle.textContent || 'audio'}.mp3`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            this.progressText.textContent = `MP3 indirme başarılı: ${result.title}`;
 
             setTimeout(() => {
                 this.hideDownloadProgress();
-            }, 2000);
+                this.showError(`MP3 indirme tamamlandı: ${result.title}`, 'success');
+            }, 1000);
 
         } catch (error) {
             clearInterval(progressInterval);
@@ -329,7 +339,7 @@ class YouTubeDownloader {
         const progressInterval = this.showDownloadProgress('MP4');
 
         try {
-            const response = await fetch('/api/download-mp4', {
+            const response = await fetch('/download-mp4', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -340,30 +350,21 @@ class YouTubeDownloader {
                 })
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'MP4 indirilemedi');
+                throw new Error(result.error || 'MP4 indirilemedi');
             }
 
             // Complete progress
             clearInterval(progressInterval);
             this.progressFill.style.width = '100%';
-            this.progressText.textContent = 'İndirme tamamlandı!';
-
-            // Create download link
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${this.videoTitle.textContent || 'video'}.mp4`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            this.progressText.textContent = `MP4 indirme başarılı: ${result.title}`;
 
             setTimeout(() => {
                 this.hideDownloadProgress();
-            }, 2000);
+                this.showError(`MP4 indirme tamamlandı: ${result.title} (${result.quality})`, 'success');
+            }, 1000);
 
         } catch (error) {
             clearInterval(progressInterval);

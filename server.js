@@ -202,29 +202,41 @@ app.get('/suggestions', async (req, res) => {
     }
 });
 
-// Get video info for download (Flutter will handle actual download)
+// Get video info for download (works for both Flutter and web)
 app.post('/video-info', async (req, res) => {
     try {
         const { url } = req.body;
         
-        if (!url || !ytdl.validateURL(url)) {
-            return res.status(400).json({ error: 'Geçersiz YouTube URL' });
+        if (!url) {
+            return res.status(400).json({ error: 'URL gerekli' });
         }
 
         try {
-            // Video bilgilerini al
-            const info = await ytdl.getInfo(url, ytdlOptions);
+            // youtube-dl-exec kullanarak video bilgilerini al
+            const info = await youtubedl(url, {
+                dumpSingleJson: true,
+                noPlaylist: true,
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            });
+            
             const videoDetails = {
-                title: info.videoDetails.title,
-                duration: info.videoDetails.lengthSeconds,
-                thumbnail: info.videoDetails.thumbnails[0]?.url,
-                author: info.videoDetails.author.name,
-                viewCount: info.videoDetails.viewCount,
-                uploadDate: info.videoDetails.uploadDate,
-                description: info.videoDetails.description?.substring(0, 500),
-                videoId: info.videoDetails.videoId,
+                title: info.title || 'Unknown',
+                duration: info.duration || 0,
+                thumbnail: info.thumbnail || '',
+                author: info.uploader || 'Unknown',
+                viewCount: info.view_count || 0,
+                uploadDate: info.upload_date || '',
+                description: info.description?.substring(0, 500) || '',
+                videoId: info.id || '',
                 url: url,
-                available: true
+                available: true,
+                formats: info.formats?.map(f => ({
+                    format_id: f.format_id,
+                    ext: f.ext,
+                    quality: f.quality,
+                    height: f.height,
+                    width: f.width
+                })) || []
             };
             
             res.json({ success: true, videoInfo: videoDetails });
@@ -244,67 +256,78 @@ app.post('/video-info', async (req, res) => {
     }
 });
 
-// Download MP3 endpoint (deprecated - use Flutter download)
+// Download MP3 endpoint for web
 app.post('/download-mp3', async (req, res) => {
-    res.status(410).json({ 
-        error: 'Bu endpoint artık kullanılmıyor', 
-        message: 'Lütfen /video-info endpoint\'ini kullanın ve indirme işlemini Flutter tarafında yapın' 
-    });
+    try {
+        const { url } = req.body;
+        
+        if (!url) {
+            return res.status(400).json({ error: 'URL gerekli' });
+        }
+
+        console.log('MP3 indirme başlatılıyor:', url);
+        
+        // youtube-dl-exec kullanarak MP3 indirme
+        const output = await youtubedl(url, {
+            extractAudio: true,
+            audioFormat: 'mp3',
+            audioQuality: '192K',
+            output: '%(title)s.%(ext)s',
+            restrictFilenames: true,
+            noPlaylist: true,
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        });
+        
+        res.json({ 
+            success: true, 
+            message: 'MP3 indirme başarılı',
+            title: output.title || 'Unknown',
+            format: 'mp3'
+        });
+        
+    } catch (error) {
+        console.error('MP3 indirme hatası:', error);
+        res.status(500).json({ 
+            error: 'MP3 indirme başarısız', 
+            message: error.message 
+        });
+    }
 });
 
-// Download MP4 endpoint
+// Download MP4 endpoint for web
 app.post('/download-mp4', async (req, res) => {
     try {
-        const { url, quality = 'highest' } = req.body;
+        const { url, quality = 'best' } = req.body;
         
-        if (!url || !ytdl.validateURL(url)) {
-            return res.status(400).json({ error: 'Geçersiz YouTube URL' });
+        if (!url) {
+            return res.status(400).json({ error: 'URL gerekli' });
         }
 
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        const title = info.videoDetails.title
-            .replace(/[<>:"/\\|?*]/g, '')
-            .replace(/\s+/g, '_')
-            .substring(0, 100);
+        console.log('MP4 indirme başlatılıyor:', url);
         
-        res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
-        res.header('Content-Type', 'video/mp4');
+        // youtube-dl-exec kullanarak MP4 indirme
+        const output = await youtubedl(url, {
+            format: quality === 'best' ? 'best[ext=mp4]' : `worst[height<=${quality}][ext=mp4]`,
+            output: '%(title)s.%(ext)s',
+            restrictFilenames: true,
+            noPlaylist: true,
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        });
         
-        let downloadOptions;
-        
-        if (quality === 'highest') {
-            const formats = info.formats
-                .filter(format => format.hasVideo && format.hasAudio && format.container === 'mp4')
-                .sort((a, b) => {
-                    const aHeight = parseInt(a.qualityLabel) || 0;
-                    const bHeight = parseInt(b.qualityLabel) || 0;
-                    return bHeight - aHeight;
-                });
-            
-            if (formats.length > 0) {
-                downloadOptions = {
-                    format: formats[0]
-                };
-            } else {
-                downloadOptions = {
-                    filter: format => format.hasVideo && format.hasAudio,
-                    quality: 'highestvideo'
-                };
-            }
-        } else {
-            downloadOptions = {
-                filter: format => format.hasVideo && format.hasAudio && 
-                    (format.qualityLabel === quality || format.quality === quality),
-                quality: quality
-            };
-        }
-        
-        downloadOptions = { ...ytdlOptions, ...downloadOptions };
-        ytdl(url, downloadOptions).pipe(res);
+        res.json({ 
+            success: true, 
+            message: 'MP4 indirme başarılı',
+            title: output.title || 'Unknown',
+            format: 'mp4',
+            quality: quality
+        });
         
     } catch (error) {
         console.error('MP4 indirme hatası:', error);
-        res.status(500).json({ error: 'MP4 indirilemedi' });
+        res.status(500).json({ 
+            error: 'MP4 indirme başarısız', 
+            message: error.message 
+        });
     }
 });
 
