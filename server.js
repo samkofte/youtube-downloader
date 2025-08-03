@@ -3,7 +3,7 @@ const ytdl = require('ytdl-core');
 const youtubedl = require('youtube-dl-exec');
 const cors = require('cors');
 const path = require('path');
-const youtubeSearch = require('youtube-search-api');
+const YouTube = require('youtube-sr').default;
 
 // Basit ytdl seçenekleri
 const ytdlOptions = {
@@ -40,15 +40,15 @@ app.get('/trending', async (req, res) => {
         console.log('Trending videolar getiriliyor...');
         
         // YouTube Search API kullanarak popüler videoları al
-        const searchResults = await youtubeSearch.GetListByKeyword('trending', false, parseInt(maxResults));
+        const searchResults = await YouTube.search('trending', { limit: parseInt(maxResults) });
         
-        if (!searchResults || !searchResults.items || searchResults.items.length === 0) {
+        if (!searchResults || searchResults.length === 0) {
             console.log('Trending video bulunamadı');
             return res.json({ videos: [] });
         }
         
         // Sonuçları formatla
-        const formattedResults = searchResults.items.map(video => {
+        const formattedResults = searchResults.map(video => {
             let viewCount = 0;
             if (video.viewCount) {
                 const cleanViewCount = video.viewCount.toString().replace(/[^0-9]/g, '');
@@ -58,12 +58,12 @@ app.get('/trending', async (req, res) => {
             return {
                 id: video.id,
                 title: video.title,
-                channel: video.channelTitle,
-                duration: video.length?.simpleText || 'Bilinmiyor',
+                channel: video.channel?.name || video.channel,
+                duration: video.duration?.text || 'Bilinmiyor',
                 viewCount: viewCount,
-                publishedAt: video.publishedAt || '',
-                thumbnail: video.thumbnail?.thumbnails?.[video.thumbnail.thumbnails.length - 1]?.url || video.thumbnail?.thumbnails?.[0]?.url || '',
-                url: `https://www.youtube.com/watch?v=${video.id}`
+                publishedAt: video.uploadedAt || '',
+                thumbnail: video.thumbnail?.url || '',
+                url: video.url || `https://www.youtube.com/watch?v=${video.id}`
             };
         });
         
@@ -86,14 +86,14 @@ app.get('/search', async (req, res) => {
         
         console.log('YouTube arama yapılıyor:', q);
         
-        const searchResults = await youtubeSearch.GetListByKeyword(q, false, parseInt(maxResults));
+        const searchResults = await YouTube.search(q, { limit: parseInt(maxResults) });
         
-        if (!searchResults || !searchResults.items || searchResults.items.length === 0) {
+        if (!searchResults || searchResults.length === 0) {
             console.log('Arama sonucu bulunamadı');
             return res.json({ videos: [] });
         }
         
-        const formattedResults = searchResults.items.map(video => {
+        const formattedResults = searchResults.map(video => {
             let viewCount = 0;
             if (video.viewCount) {
                 const cleanViewCount = video.viewCount.toString().replace(/[^0-9]/g, '');
@@ -103,12 +103,12 @@ app.get('/search', async (req, res) => {
             return {
                 id: video.id,
                 title: video.title,
-                channel: video.channelTitle,
-                duration: video.length?.simpleText || 'Bilinmiyor',
+                channel: video.channel?.name || video.channel,
+                duration: video.duration?.text || 'Bilinmiyor',
                 viewCount: viewCount,
-                publishedAt: video.publishedAt || '',
-                thumbnail: video.thumbnail?.thumbnails?.[video.thumbnail.thumbnails.length - 1]?.url || video.thumbnail?.thumbnails?.[0]?.url || '',
-                url: `https://www.youtube.com/watch?v=${video.id}`
+                publishedAt: video.uploadedAt || '',
+                thumbnail: video.thumbnail?.url || '',
+                url: video.url || `https://www.youtube.com/watch?v=${video.id}`
             };
         });
         
@@ -167,12 +167,12 @@ app.get('/suggestions', async (req, res) => {
         
         console.log('Arama önerileri getiriliyor:', q);
         
-        const searchResults = await youtubeSearch.GetListByKeyword(q, false, 8);
+        const searchResults = await YouTube.search(q, { limit: 8 });
         
         const suggestions = [];
         
-        if (searchResults && searchResults.items) {
-            searchResults.items.forEach(video => {
+        if (searchResults && searchResults.length > 0) {
+            searchResults.forEach(video => {
                 if (video.title && suggestions.length < 8) {
                     let cleanTitle = video.title
                         .replace(/[\[\](){}]/g, '')
@@ -465,13 +465,13 @@ app.get('/api/search-suggestions', async (req, res) => {
         console.log('Gerçek YouTube önerileri getiriliyor:', q);
 
         // YouTube'dan gerçek arama sonuçları al
-        const searchResults = await youtubeSearch.GetListByKeyword(q, false, 10);
+        const searchResults = await YouTube.search(q, { limit: 10 });
         
         const suggestions = [];
         
-        if (searchResults && searchResults.items) {
+        if (searchResults && searchResults.length > 0) {
             // Gerçek video başlıklarını öneri olarak kullan
-            searchResults.items.forEach(video => {
+            searchResults.forEach(video => {
                 if (video.title && suggestions.length < 8) {
                     // Video başlığını temizle ve kısalt
                     let cleanTitle = video.title
@@ -518,15 +518,15 @@ app.post('/api/search', async (req, res) => {
         console.log('YouTube arama yapılıyor:', query);
 
         // YouTube Search API kullanarak arama
-        const searchResults = await youtubeSearch.GetListByKeyword(query, false, 20);
+        const searchResults = await YouTube.search(query, { limit: 20 });
 
-        if (!searchResults || !searchResults.items || searchResults.items.length === 0) {
+        if (!searchResults || searchResults.length === 0) {
             console.log('Arama sonucu bulunamadı');
             return res.json([]);
         }
 
         // Sonuçları formatla
-        const formattedResults = searchResults.items.map(video => {
+        const formattedResults = searchResults.map(video => {
             // viewCount'u sayısal değere çevir
             let viewCount = 0;
             if (video.viewCount) {
@@ -538,12 +538,12 @@ app.post('/api/search', async (req, res) => {
             return {
                 id: video.id,
                 title: video.title,
-                channel: video.channelTitle,
-                duration: video.length?.simpleText || 'Bilinmiyor',
+                channel: video.channel?.name || video.channel,
+                duration: video.duration?.text || 'Bilinmiyor',
                 viewCount: viewCount,
-                publishedAt: video.publishedAt || '',
-                thumbnail: video.thumbnail?.thumbnails?.[video.thumbnail.thumbnails.length - 1]?.url || video.thumbnail?.thumbnails?.[0]?.url || '',
-                url: `https://www.youtube.com/watch?v=${video.id}`
+                publishedAt: video.uploadedAt || '',
+                thumbnail: video.thumbnail?.url || '',
+                url: video.url || `https://www.youtube.com/watch?v=${video.id}`
             };
         });
 
