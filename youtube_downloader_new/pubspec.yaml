@@ -39,6 +39,7 @@ dependencies:
   
   # Progress indicators
   percent_indicator: ^4.2.3
+  open_file: ^3.3.2
 
 dev_dependencies:
   flutter_test:

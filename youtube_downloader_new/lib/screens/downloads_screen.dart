@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:open_file/open_file.dart';
 import 'dart:developer' as developer;
 import '../providers/download_provider.dart';
 import '../models/download_item.dart';
 import 'dart:io';
-import 'package:flutter/services.dart';
+import '../providers/youtube_provider.dart';
 
 class DownloadsScreen extends StatefulWidget {
   const DownloadsScreen({super.key});
@@ -49,17 +49,31 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           ],
         ),
         actions: [
-          Consumer<DownloadProvider>(
-            builder: (context, provider, child) {
-              if (provider.downloads.isEmpty) return const SizedBox();
-              return IconButton(
-                icon: const Icon(Icons.delete_sweep),
-                onPressed: () => _showClearDialog(context),
-                tooltip: 'Tümünü Temizle',
-              );
-            }
-            
-          ),
+          // Eksik dosyaları yeniden indir
+          Consumer<DownloadProvider>(builder: (context, provider, child) {
+            final missingCount = provider.downloads
+                .where((d) =>
+                    !File(d.filePath).existsSync() &&
+                    (d.originalUrl.isNotEmpty))
+                .length;
+            return IconButton(
+              icon: const Icon(Icons.download_for_offline),
+              onPressed: missingCount > 0
+                  ? () => _checkAndRedownloadMissing(context)
+                  : null,
+              tooltip: missingCount > 0
+                  ? 'Eksik Dosyaları İndir ($missingCount)'
+                  : 'Eksik dosya yok',
+            );
+          }),
+          Consumer<DownloadProvider>(builder: (context, provider, child) {
+            if (provider.downloads.isEmpty) return const SizedBox();
+            return IconButton(
+              icon: const Icon(Icons.delete_sweep),
+              onPressed: () => _showClearDialog(context),
+              tooltip: 'Tümünü Temizle',
+            );
+          }),
         ],
       ),
       body: Consumer<DownloadProvider>(
@@ -161,55 +175,77 @@ class _DownloadsScreenState extends State<DownloadsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
+            // İlk satır: Süre ve tarih
             Row(
               children: [
                 Icon(
                   Icons.access_time,
-                  size: 14,
+                  size: 12,
                   color: Colors.grey[600],
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  download.duration,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                const SizedBox(width: 2),
+                Flexible(
+                  child: Text(
+                    download.duration,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const Spacer(),
                 Icon(
                   Icons.calendar_today,
-                  size: 14,
+                  size: 12,
                   color: Colors.grey[600],
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  _formatDate(download.downloadDate),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                const SizedBox(width: 2),
+                Flexible(
+                  child: Text(
+                    _formatDate(download.downloadDate),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
+            // İkinci satır: Dosya durumu
             Row(
               children: [
                 Icon(
                   fileExists ? Icons.check_circle : Icons.error,
-                  size: 14,
+                  size: 12,
                   color: fileExists ? Colors.green : Colors.red,
                 ),
-                const SizedBox(width: 4),
-                Expanded(
+                const SizedBox(width: 2),
+                Flexible(
                   child: Text(
                     fileExists ? 'Dosya mevcut' : 'Dosya bulunamadı',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       color: fileExists ? Colors.green : Colors.red,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const Spacer(),
+                // Dosya boyutu ekle
+                if (fileExists)
+                  Flexible(
+                    child: Text(
+                      _formatFileSize(File(download.filePath).lengthSync()),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey[500],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
               ],
             ),
           ],
@@ -225,6 +261,17 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                     Icon(Icons.open_in_new),
                     SizedBox(width: 8),
                     Text('Dosyayı Aç'),
+                  ],
+                ),
+              ),
+            if (!fileExists && download.originalUrl.isNotEmpty)
+              const PopupMenuItem(
+                value: 'redownload',
+                child: Row(
+                  children: [
+                    Icon(Icons.download),
+                    SizedBox(width: 8),
+                    Text('Yeniden İndir'),
                   ],
                 ),
               ),
@@ -244,25 +291,13 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     );
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inDays == 0) {
-      return 'Bugün';
-    } else if (difference.inDays == 1) {
-      return 'Dün';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} gün önce';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
-  }
-
   void _handleMenuAction(String action, DownloadItem download) {
     switch (action) {
       case 'open':
         _openFile(download);
+        break;
+      case 'redownload':
+        _redownloadSingle(download);
         break;
       case 'delete':
         _deleteDownload(download);
@@ -270,50 +305,219 @@ class _DownloadsScreenState extends State<DownloadsScreen>
     }
   }
 
+  Future<void> _redownloadSingle(DownloadItem download) async {
+    if (download.originalUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Orijinal bağlantı bulunamadı, yeniden indirilemiyor.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final ytProvider = context.read<YouTubeProvider>();
+    final dlProvider = context.read<DownloadProvider>();
+
+    _showDownloadProgressDialog(title: download.title);
+
+    try {
+      if (download.type == 'mp3') {
+        await ytProvider.downloadMp3(
+          download.originalUrl,
+          download.title,
+          dlProvider,
+          thumbnailUrl: download.thumbnailUrl,
+          duration: download.duration,
+          existingItemId: download.id,
+        );
+      } else {
+        // Varsayılan kalite: 720p
+        await ytProvider.downloadMp4(
+          download.originalUrl,
+          '720p',
+          download.title,
+          dlProvider,
+          thumbnailUrl: download.thumbnailUrl,
+          duration: download.duration,
+          existingItemId: download.id,
+        );
+      }
+
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Yeniden indirildi: ${download.title}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Yeniden indirme hatası: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _checkAndRedownloadMissing(BuildContext context) async {
+    final dlProvider = context.read<DownloadProvider>();
+    final ytProvider = context.read<YouTubeProvider>();
+
+    final downloads = List<DownloadItem>.from(dlProvider.downloads);
+    final missing = downloads
+        .where(
+            (d) => !File(d.filePath).existsSync() && d.originalUrl.isNotEmpty)
+        .toList();
+
+    if (missing.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Eksik dosya bulunamadı.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eksik Dosyaları İndir'),
+        content: Text(
+            '${missing.length} dosya eksik görünüyor. Hepsini yeniden indirmek ister misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Evet'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    for (int i = 0; i < missing.length; i++) {
+      final item = missing[i];
+      _showDownloadProgressDialog(
+          title: '${i + 1}/${missing.length} - ${item.title}');
+      try {
+        if (item.type == 'mp3') {
+          await ytProvider.downloadMp3(
+            item.originalUrl,
+            item.title,
+            dlProvider,
+            thumbnailUrl: item.thumbnailUrl,
+            duration: item.duration,
+            existingItemId: item.id,
+          );
+        } else {
+          await ytProvider.downloadMp4(
+            item.originalUrl,
+            '720p',
+            item.title,
+            dlProvider,
+            thumbnailUrl: item.thumbnailUrl,
+            duration: item.duration,
+            existingItemId: item.id,
+          );
+        }
+      } catch (e) {
+        developer.log('Toplu yeniden indirme hatası: $e',
+            name: 'DownloadsScreen');
+      } finally {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      }
+    }
+
+    // Güncel listeyi yükle
+    await dlProvider.loadDownloads();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Eksik dosyalar indirildi: ${missing.length}/${missing.length}'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _showDownloadProgressDialog({required String title}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.download, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title)),
+          ],
+        ),
+        content: Consumer<YouTubeProvider>(
+          builder: (context, provider, child) {
+            final progress = provider.downloadProgress;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LinearProgressIndicator(
+                  value: progress?.progress,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+                const SizedBox(height: 12),
+                Text(progress?.status ?? 'Hazırlanıyor...'),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
   void _openFile(DownloadItem download) async {
     try {
       final file = File(download.filePath);
-      
+
       if (await file.exists()) {
-        developer.log('Dosya açılıyor: ${download.filePath}', name: 'DownloadsScreen');
-        
-        bool success = false;
-        
-        // Try different methods based on platform
-        if (Platform.isWindows) {
-          try {
-            // Method 1: Use Windows explorer to open file
-            final result = await Process.run(
-              'explorer',
-              ['/select,', download.filePath],
-              runInShell: true,
-            );
-            success = result.exitCode == 0;
-            
-            if (!success) {
-              // Method 2: Try to open with default application
-              final result2 = await Process.run(
-                'cmd',
-                ['/c', 'start', '', '"${download.filePath}"'],
-                runInShell: true,
-              );
-              success = result2.exitCode == 0;
-            }
-          } catch (e) {
-            developer.log('Windows dosya açma hatası: $e', name: 'DownloadsScreen');
-          }
-        } else {
-          // For other platforms, try url_launcher
-          try {
-            final uri = Uri.file(download.filePath);
-            success = await launchUrl(uri);
-          } catch (e) {
-            developer.log('URL launcher hatası: $e', name: 'DownloadsScreen');
-          }
-        }
-        
+        developer.log('Dosya açılıyor: ${download.filePath}',
+            name: 'DownloadsScreen');
+
+        // open_file paketi ile dosyayı aç
+        final result = await OpenFile.open(download.filePath);
+
         if (mounted) {
-          if (success) {
+          if (result.type == ResultType.done) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Row(
@@ -329,47 +533,26 @@ class _DownloadsScreenState extends State<DownloadsScreen>
                 backgroundColor: Colors.green,
               ),
             );
-            }
           } else {
-            // Fallback: Show file path and copy to clipboard
-            await Clipboard.setData(ClipboardData(text: download.filePath));
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+            // Dosya açılamadı, klasörü açmayı dene
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
                 content: Row(
                   children: [
-                    const Icon(Icons.content_copy, color: Colors.white),
-                    const SizedBox(width: 8),
+                    Icon(Icons.folder_open, color: Colors.white),
+                    SizedBox(width: 8),
                     Expanded(
-                      child: Text('Dosya yolu panoya kopyalandı: ${download.title}'),
+                      child: Text('Dosya açılamadı, klasör açılıyor...'),
                     ),
                   ],
                 ),
-                duration: const Duration(seconds: 4),
+                duration: Duration(seconds: 2),
                 backgroundColor: Colors.blue,
-                action: SnackBarAction(
-                  label: 'Klasörü Aç',
-                  textColor: Colors.white,
-                  onPressed: () async {
-                    try {
-                      final directory = file.parent;
-                      if (Platform.isWindows) {
-                        await Process.run(
-                          'explorer',
-                          [directory.path],
-                          runInShell: true,
-                        );
-                      } else {
-                        final dirUri = Uri.file(directory.path);
-                        await launchUrl(dirUri);
-                      }
-                    } catch (e) {
-                      developer.log('Klasör açma hatası: $e', name: 'DownloadsScreen');
-                    }
-                  },
-                ),
               ),
             );
+
+            // Klasörü aç
+            await OpenFile.open(download.filePath, type: "folder");
           }
         }
       } else {

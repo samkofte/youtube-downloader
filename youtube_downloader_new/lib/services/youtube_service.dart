@@ -9,7 +9,21 @@ import '../models/download_item.dart';
 
 class YouTubeService {
   static String get baseUrl {
-    return 'https://youtube-downloader-5rl2.onrender.com';
+    return 'http://localhost:3001';
+    // return 'https://youtube-downloader-5rl2.onrender.com';
+  }
+
+  // Yerel geliştirme için indirme taban adresi (mobil için uygun loopback)
+  static String get downloadBaseUrl {
+    if (Platform.isAndroid) {
+      // Android cihaz -> host makine: gerçek IP adresi
+      return 'http://192.168.1.14:3001';
+    } else if (Platform.isIOS) {
+      // iOS Simulator -> host makine: localhost
+      return 'http://localhost:3001';
+    }
+    // Diğer platformlarda gerekirse LAN IP kullanın
+    return 'http://localhost:3001';
   }
 
   static final YoutubeExplode _yt = YoutubeExplode();
@@ -21,9 +35,10 @@ class YouTubeService {
     try {
       developer.log('📡 Backend API arama isteği gönderiliyor...',
           name: 'YouTubeService');
-      final response = await http.get(
-        Uri.parse('$baseUrl/ara/v2/${Uri.encodeComponent(query)}'),
+      final response = await http.post(
+        Uri.parse('$downloadBaseUrl/api/search'),
         headers: {'Content-Type': 'application/json'},
+        body: json.encode({'query': query}),
       );
 
       if (response.statusCode == 200) {
@@ -33,16 +48,16 @@ class YouTubeService {
             name: 'YouTubeService');
         return videos
             .map((video) => VideoModel(
-                  id: video['videoId'] ?? '',
+                  id: video['id'] ?? '',
                   title: video['title'] ?? '',
                   thumbnail: video['thumbnail'] ?? '',
                   duration: video['duration'] ?? '',
                   description: '',
-                  channelTitle: '',
-                  viewCount: '0',
-                  publishedAt: '',
-                  url:
-                      'https://www.youtube.com/watch?v=${video['videoId'] ?? ''}',
+                  channelTitle: video['channel'] ?? '',
+                  viewCount: video['viewCount']?.toString() ?? '0',
+                  publishedAt: video['publishedAt'] ?? '',
+                  url: video['url'] ??
+                      'https://www.youtube.com/watch?v=${video['id'] ?? ''}',
                 ))
             .toList();
       } else {
@@ -80,13 +95,13 @@ class YouTubeService {
   static Future<List<String>> getSearchSuggestions(String query) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/complete/${Uri.encodeComponent(query)}'),
+        Uri.parse(
+            '$downloadBaseUrl/api/search-suggestions?q=${Uri.encodeComponent(query)}'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        final List<dynamic> suggestions = data.values.first ?? [];
+        final List<dynamic> suggestions = json.decode(response.body);
         return suggestions.cast<String>();
       } else {
         return [];
@@ -96,182 +111,166 @@ class YouTubeService {
     }
   }
 
-  // Download MP3 using Backend API
+  // Download MP3 using youtube_explode_dart (direct download)
   static Future<String> downloadMp3(
       String url, String title, Function(double) onProgress) async {
-    developer.log('🚀 MP3 İndirme Başlatıldı (Backend API)', name: 'YouTubeService');
+    developer.log('🚀 MP3 İndirme Başlatıldı (Direct Download)',
+        name: 'YouTubeService');
     developer.log('🔗 Video URL: $url', name: 'YouTubeService');
     developer.log('📁 Dosya adı: $title', name: 'YouTubeService');
 
     try {
-      // Extract video ID from URL
-      final videoId = _extractVideoId(url);
-      if (videoId == null) {
-        throw Exception('Video ID çıkarılamadı');
-      }
-
-      developer.log('🎵 Backend API ile MP3 indirme başlatılıyor...',
-          name: 'YouTubeService');
-
-      // Update progress to show we're starting
       onProgress(0.1);
-      
-      // Get MP3 stream URL from backend
-      final response = await http.get(
-        Uri.parse('$baseUrl/dinle/$videoId'),
-        headers: {'Content-Type': 'application/json'},
-      );
 
-      if (response.statusCode != 200 && response.statusCode != 302) {
-        throw Exception(
-            'Backend API MP3 stream alınamadı: ${response.statusCode}');
-      }
+      // Video bilgilerini al
+      final video = await _yt.videos.get(url);
+      onProgress(0.2);
 
-      onProgress(0.3); // Backend responded
+      // Audio stream'i al
+      final manifest = await _yt.videos.streamsClient.getManifest(video.id);
+      final audioStream = manifest.audioOnly.withHighestBitrate();
 
-      // Backend redirects to the actual stream URL
-      final streamUrl = response.request?.url.toString() ?? '';
-      if (streamUrl.isEmpty) {
-        throw Exception('Stream URL alınamadı');
-      }
+      onProgress(0.3);
 
-      developer.log('✅ MP3 stream URL alındı', name: 'YouTubeService');
-      onProgress(0.5); // Stream URL obtained
-
-      // Download the stream - MP3 files go to Downloads/YouTube_Music folder
+      // Kayıt konumu: Downloads/YouTube_Music (yoksa Documents)
       final baseDirectory = await getDownloadsDirectory() ??
           await getApplicationDocumentsDirectory();
-      
-      // Create custom folder for YouTube music downloads
       final directory = Directory('${baseDirectory.path}/YouTube_Music');
       if (!await directory.exists()) {
         await directory.create(recursive: true);
-        developer.log('📁 YouTube_Music klasörü oluşturuldu: ${directory.path}', name: 'YouTubeService');
+        developer.log('📁 YouTube_Music klasörü oluşturuldu: ${directory.path}',
+            name: 'YouTubeService');
       }
-      
+
       final fileName = '${_sanitizeFileName(title)}.mp3';
       final file = File('${directory.path}/$fileName');
+      final sink = file.openWrite();
 
-      developer.log('💾 Dosya kaydediliyor: ${file.path}', name: 'YouTubeService');
-      onProgress(0.7); // Starting file download
+      onProgress(0.4);
 
-      final streamResponse = await http.get(Uri.parse(streamUrl));
-      if (streamResponse.statusCode == 200) {
-        onProgress(0.9); // File downloaded, writing to disk
-        await file.writeAsBytes(streamResponse.bodyBytes);
-        
-        onProgress(1.0); // Mark as complete
+      // Audio stream'i indir
+      final audioStreamData = _yt.videos.streamsClient.get(audioStream);
+      final totalBytes = audioStream.size.totalBytes;
+      int downloadedBytes = 0;
 
-        developer.log('✅ MP3 başarıyla indirildi: ${file.path}',
-            name: 'YouTubeService');
-        
-        // Create download item for tracking
-        final downloadItem = DownloadItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: title,
-          filePath: file.path,
-          type: 'mp3',
-          downloadDate: DateTime.now(),
-          thumbnailUrl: '', // Will be set from video data
-          duration: '', // Will be set from video data
-        );
-        
-        return 'MP3 başarıyla indirildi: ${file.path}|${downloadItem.id}';
-      } else {
-        throw Exception('Stream indirilemedi: ${streamResponse.statusCode}');
+      await for (final chunk in audioStreamData) {
+        sink.add(chunk);
+        downloadedBytes += chunk.length;
+
+        if (totalBytes > 0) {
+          final progress = 0.4 + (0.5 * downloadedBytes / totalBytes);
+          onProgress(progress);
+        }
       }
+
+      await sink.flush();
+      await sink.close();
+
+      onProgress(1.0);
+
+      developer.log('✅ MP3 başarıyla indirildi: ${file.path}',
+          name: 'YouTubeService');
+
+      final downloadItem = DownloadItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        filePath: file.path,
+        type: 'mp3',
+        downloadDate: DateTime.now(),
+        thumbnailUrl: video.thumbnails.highResUrl,
+        duration: video.duration?.toString() ?? '',
+        originalUrl: url,
+      );
+
+      return 'MP3 başarıyla indirildi: ${file.path}|${downloadItem.id}';
     } catch (e) {
       developer.log('❌ MP3 indirme hatası: $e', name: 'YouTubeService');
       throw Exception('MP3 indirme hatası: $e');
     }
   }
 
-  // Download MP4 using Backend API
+  // Download MP4 using youtube_explode_dart (direct download)
   static Future<String> downloadMp4(String url, String quality, String title,
       Function(double) onProgress) async {
-    developer.log('🚀 MP4 İndirme Başlatıldı (Backend API)', name: 'YouTubeService');
+    developer.log('🚀 MP4 İndirme Başlatıldı (Direct Download)',
+        name: 'YouTubeService');
     developer.log('🔗 Video URL: $url', name: 'YouTubeService');
     developer.log('📁 Dosya adı: $title', name: 'YouTubeService');
     developer.log('🎯 Kalite: $quality', name: 'YouTubeService');
 
     try {
-      // Extract video ID from URL
-      final videoId = _extractVideoId(url);
-      if (videoId == null) {
-        throw Exception('Video ID çıkarılamadı');
-      }
-
-      developer.log('🎬 Backend API ile MP4 indirme başlatılıyor...',
-          name: 'YouTubeService');
-
-      // Update progress to show we're starting
       onProgress(0.1);
 
-      // Get MP4 stream URL from backend
-      final response = await http.get(
-        Uri.parse('$baseUrl/yt/$videoId'),
-        headers: {'Content-Type': 'application/json'},
+      // Video bilgilerini al
+      final video = await _yt.videos.get(url);
+      onProgress(0.2);
+
+      // Video stream'i al
+      final manifest = await _yt.videos.streamsClient.getManifest(video.id);
+
+      // Kalite seçimi
+      VideoStreamInfo videoStream;
+      if (quality == 'highest') {
+        videoStream = manifest.muxed.withHighestBitrate();
+      } else {
+        // Use highest quality available
+        videoStream = manifest.muxed.withHighestBitrate();
+      }
+
+      onProgress(0.3);
+
+      // Kayıt konumu: Downloads/YouTube_Videos (yoksa Documents)
+      final baseDirectory = await getDownloadsDirectory() ??
+          await getApplicationDocumentsDirectory();
+      final directory = Directory('${baseDirectory.path}/YouTube_Videos');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+        developer.log(
+            '📁 YouTube_Videos klasörü oluşturuldu: ${directory.path}',
+            name: 'YouTubeService');
+      }
+
+      final fileName = '${_sanitizeFileName(title)}.mp4';
+      final file = File('${directory.path}/$fileName');
+      final sink = file.openWrite();
+
+      onProgress(0.4);
+
+      // Video stream'i indir
+      final videoStreamData = _yt.videos.streamsClient.get(videoStream);
+      final totalBytes = videoStream.size.totalBytes;
+      int downloadedBytes = 0;
+
+      await for (final chunk in videoStreamData) {
+        sink.add(chunk);
+        downloadedBytes += chunk.length;
+
+        if (totalBytes > 0) {
+          final progress = 0.4 + (0.5 * downloadedBytes / totalBytes);
+          onProgress(progress);
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      onProgress(1.0);
+
+      developer.log('✅ MP4 başarıyla indirildi: ${file.path}',
+          name: 'YouTubeService');
+
+      final downloadItem = DownloadItem(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        filePath: file.path,
+        type: 'mp4',
+        downloadDate: DateTime.now(),
+        thumbnailUrl: video.thumbnails.highResUrl,
+        duration: video.duration?.toString() ?? '',
+        originalUrl: url,
       );
 
-      if (response.statusCode != 200 && response.statusCode != 302) {
-        throw Exception(
-            'Backend API MP4 stream alınamadı: ${response.statusCode}');
-      }
-
-      onProgress(0.3); // Backend responded
-
-      // Backend redirects to the actual stream URL
-      final streamUrl = response.request?.url.toString() ?? '';
-      if (streamUrl.isEmpty) {
-        throw Exception('Stream URL alınamadı');
-      }
-
-      developer.log('✅ MP4 stream URL alındı', name: 'YouTubeService');
-      onProgress(0.5); // Stream URL obtained
-
-      // Download the stream - MP4 files go to Downloads/YouTube_Videos
-      final directory = await getDownloadsDirectory() ??
-          await getApplicationDocumentsDirectory();
-      
-      // Create custom folder for YouTube video downloads
-      final customFolder = Directory('${directory.path}/YouTube_Videos');
-      if (!await customFolder.exists()) {
-        await customFolder.create(recursive: true);
-        developer.log('📁 YouTube_Videos klasörü oluşturuldu: ${customFolder.path}', name: 'YouTubeService');
-      }
-      
-      final fileName = '${_sanitizeFileName(title)}.mp4';
-      final file = File('${customFolder.path}/$fileName');
-
-      developer.log('💾 Dosya kaydediliyor: ${file.path}', name: 'YouTubeService');
-      onProgress(0.7); // Starting file download
-
-      final streamResponse = await http.get(Uri.parse(streamUrl));
-      if (streamResponse.statusCode == 200) {
-        onProgress(0.9); // File downloaded, writing to disk
-        await file.writeAsBytes(streamResponse.bodyBytes);
-        
-        onProgress(1.0); // Mark as complete
-
-        developer.log('✅ MP4 başarıyla indirildi!', name: 'YouTubeService');
-        developer.log('✅ MP4 başarıyla indirildi: ${file.path}',
-            name: 'YouTubeService');
-        
-        // Create download item for tracking
-        final downloadItem = DownloadItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: title,
-          filePath: file.path,
-          type: 'mp4',
-          downloadDate: DateTime.now(),
-          thumbnailUrl: '', // Will be set from video data
-          duration: '', // Will be set from video data
-        );
-        
-        return 'MP4 başarıyla indirildi: ${file.path}|${downloadItem.id}';
-      } else {
-        throw Exception('Stream indirilemedi: ${streamResponse.statusCode}');
-      }
+      return 'MP4 başarıyla indirildi: ${file.path}|${downloadItem.id}';
     } catch (e) {
       developer.log('❌ MP4 indirme hatası: $e', name: 'YouTubeService');
       throw Exception('MP4 indirme hatası: $e');
@@ -284,39 +283,33 @@ class YouTubeService {
     developer.log('📈 Trending videolar alınıyor...', name: 'YouTubeService');
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/liste/tr'),
+        Uri.parse('$downloadBaseUrl/trending?maxResults=$maxResults'),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final List<dynamic> playLists = data['playLists'] ?? [];
-        List<VideoModel> videos = [];
+        final List<dynamic> videos = data['videos'] ?? [];
 
-        for (var playlist in playLists) {
-          for (var playlistName in playlist.keys) {
-            final Map<String, dynamic> playlistVideos = playlist[playlistName];
-            for (var videoId in playlistVideos.keys) {
-              final videoData = playlistVideos[videoId];
-              videos.add(VideoModel(
-                id: videoId,
-                title: videoData['title'] ?? '',
-                thumbnail: videoData['thumbnail'] ?? '',
-                duration: videoData['duration'] ?? '',
-                description: '',
-                channelTitle: '',
-                viewCount: '0',
-                publishedAt: '',
-                url: 'https://www.youtube.com/watch?v=$videoId',
-              ));
-            }
-          }
-        }
+        final videoModels = videos
+            .map((video) => VideoModel(
+                  id: video['id'] ?? '',
+                  title: video['title'] ?? '',
+                  thumbnail: video['thumbnail'] ?? '',
+                  duration: video['duration'] ?? '',
+                  description: '',
+                  channelTitle: video['channel'] ?? '',
+                  viewCount: video['viewCount']?.toString() ?? '0',
+                  publishedAt: video['publishedAt'] ?? '',
+                  url: video['url'] ??
+                      'https://www.youtube.com/watch?v=${video['id'] ?? ''}',
+                ))
+            .toList();
 
         developer.log(
-            '✅ Trending videolar başarıyla alındı: ${videos.length} video',
+            '✅ Trending videolar başarıyla alındı: ${videoModels.length} video',
             name: 'YouTubeService');
-        return videos;
+        return videoModels;
       } else {
         throw Exception(
             'Failed to get trending videos: ${response.statusCode}');
@@ -337,13 +330,13 @@ class YouTubeService {
       try {
         developer.log('🌐 Backend API ile video bilgisi deneniyor...',
             name: 'YouTubeService');
-        developer.log('📤 İstek URL: $baseUrl/video-info',
+        developer.log('📤 İstek URL: $downloadBaseUrl/video-info',
             name: 'YouTubeService');
         developer.log('📤 İstek body: {"url": "$url"}', name: 'YouTubeService');
 
         final response = await http
             .post(
-              Uri.parse('$baseUrl/video-info'),
+              Uri.parse('$downloadBaseUrl/video-info'),
               headers: {'Content-Type': 'application/json'},
               body: json.encode({'url': url}),
             )
@@ -354,15 +347,15 @@ class YouTubeService {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           developer.log(
-              '✅ Backend API ile video bilgisi alındı: ${data['title']}',
+              '✅ Backend API ile video bilgisi alındı: ${data['videoInfo']['title']}',
               name: 'YouTubeService');
           return {
-            'title': data['title'] ?? '',
-            'duration': data['duration']?.toString() ?? '0',
-            'thumbnail': data['thumbnail'] ?? '',
-            'author': data['author'] ?? '',
-            'viewCount': data['viewCount']?.toString() ?? '0',
-            'qualities': data['qualities'] ?? ['720p', '480p', '360p'],
+            'title': data['videoInfo']['title'] ?? '',
+            'duration': data['videoInfo']['duration']?.toString() ?? '0',
+            'thumbnail': data['videoInfo']['thumbnail'] ?? '',
+            'author': data['videoInfo']['author'] ?? '',
+            'viewCount': data['videoInfo']['viewCount']?.toString() ?? '0',
+            'qualities': ['720p', '480p', '360p'], // Default qualities
           };
         } else {
           developer.log(
@@ -436,21 +429,11 @@ class YouTubeService {
     return match != null ? int.parse(match.group(1)!) : 0;
   }
 
-  // Helper function to extract video ID from YouTube URL
-  static String? _extractVideoId(String url) {
-    final regExp = RegExp(
-      r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})',
-      caseSensitive: false,
-    );
-    final match = regExp.firstMatch(url);
-    return match?.group(1);
-  }
-
   // Check server status
   static Future<bool> checkServerStatus() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/health'),
+        Uri.parse('$downloadBaseUrl/health'),
         headers: {'Content-Type': 'application/json'},
       ).timeout(const Duration(seconds: 5));
 

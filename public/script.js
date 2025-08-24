@@ -572,7 +572,7 @@ class YouTubeDownloader {
           const progressInterval = this.showDownloadProgress(`"${title}" MP3 indiriliyor...`);
           
           try {
-              const response = await fetch('/api/download-mp3', {
+              const response = await fetch('/download-mp3', {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json'
@@ -580,32 +580,17 @@ class YouTubeDownloader {
                   body: JSON.stringify({ url })
               });
 
-              if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(errorData.error || 'MP3 indirilemedi');
+              const data = await response.json();
+              if (!response.ok || !data.success) {
+                  throw new Error(data.error || data.message || 'MP3 indirilemedi');
               }
 
               // Complete progress
               clearInterval(progressInterval);
               this.hideDownloadProgress();
 
-              // Create download link
-              const blob = await response.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = downloadUrl;
-              // Türkçe karakterleri destekleyen dosya adı temizleme
-              const cleanTitle = title
-                  .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
-                  .replace(/\s+/g, '_') // Boşlukları alt çizgi ile değiştir
-                  .substring(0, 100); // Dosya adını 100 karakterle sınırla
-              a.download = `${cleanTitle}.mp3`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              window.URL.revokeObjectURL(downloadUrl);
-
-
+              // Başarı mesajı göster
+              this.showError(`MP3 indirme başarılı: ${data.title || title}`, 'success');
 
           } catch (error) {
               clearInterval(progressInterval);
@@ -625,43 +610,28 @@ class YouTubeDownloader {
           const progressInterval = this.showDownloadProgress(`"${title}" MP4 indiriliyor...`);
           
           try {
-              const response = await fetch('/api/download-mp4', {
+              const response = await fetch('/download-mp4', {
                   method: 'POST',
                   headers: {
                       'Content-Type': 'application/json'
                   },
                   body: JSON.stringify({ 
                       url: url,
-                      quality: 'highest'
+                      quality: 'best'
                   })
               });
 
-              if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(errorData.error || 'MP4 indirilemedi');
+              const data = await response.json();
+              if (!response.ok || !data.success) {
+                  throw new Error(data.error || data.message || 'MP4 indirilemedi');
               }
 
               // Complete progress
               clearInterval(progressInterval);
               this.hideDownloadProgress();
 
-              // Create download link
-              const blob = await response.blob();
-              const downloadUrl = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = downloadUrl;
-              // Türkçe karakterleri destekleyen dosya adı temizleme
-              const cleanTitle = title
-                  .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
-                  .replace(/\s+/g, '_') // Boşlukları alt çizgi ile değiştir
-                  .substring(0, 100); // Dosya adını 100 karakterle sınırla
-              a.download = `${cleanTitle}.mp4`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              window.URL.revokeObjectURL(downloadUrl);
-
-
+              // Başarı mesajı göster
+              this.showError(`MP4 indirme başarılı: ${data.title || title} (${data.quality || 'best'})`, 'success');
 
           } catch (error) {
               clearInterval(progressInterval);

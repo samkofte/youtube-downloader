@@ -123,7 +123,7 @@ class YouTubeProvider extends ChangeNotifier {
   }
 
   // Download MP3
-  Future<void> downloadMp3(String url, String title, DownloadProvider downloadProvider, {String? thumbnailUrl, String? duration}) async {
+  Future<void> downloadMp3(String url, String title, DownloadProvider downloadProvider, {String? thumbnailUrl, String? duration, String? existingItemId}) async {
     developer.log('🎵 MP3 indirme başlatılıyor: $url', name: 'YouTubeProvider');
     _isDownloading = true;
     _error = null;
@@ -145,16 +145,20 @@ class YouTubeProvider extends ChangeNotifier {
       final parts = result.split('|');
       if (parts.length > 1) {
         final downloadItem = DownloadItem(
-          id: parts[1],
+          id: existingItemId ?? parts[1],
           title: title,
           filePath: parts[0].replaceAll('MP3 başarıyla indirildi: ', ''),
           type: 'mp3',
           downloadDate: DateTime.now(),
           thumbnailUrl: thumbnailUrl ?? '',
           duration: duration ?? '',
+          originalUrl: url,
         );
-        
-        await downloadProvider.addDownload(downloadItem);
+        if (existingItemId != null) {
+          await downloadProvider.updateDownload(downloadItem);
+        } else {
+          await downloadProvider.addDownload(downloadItem);
+        }
       }
       
       developer.log('✅ MP3 indirme tamamlandı!', name: 'YouTubeProvider');
@@ -177,7 +181,7 @@ class YouTubeProvider extends ChangeNotifier {
   }
 
   // Download MP4
-  Future<void> downloadMp4(String url, String quality, String title, DownloadProvider downloadProvider, {String? thumbnailUrl, String? duration}) async {
+  Future<void> downloadMp4(String url, String quality, String title, DownloadProvider downloadProvider, {String? thumbnailUrl, String? duration, String? existingItemId}) async {
     _isDownloading = true;
     _error = null;
     _downloadProgress = DownloadProgress(progress: 0.0, status: 'Starting download...');
@@ -196,16 +200,20 @@ class YouTubeProvider extends ChangeNotifier {
       final parts = result.split('|');
       if (parts.length > 1) {
         final downloadItem = DownloadItem(
-          id: parts[1],
+          id: existingItemId ?? parts[1],
           title: title,
           filePath: parts[0].replaceAll('MP4 başarıyla indirildi: ', ''),
           type: 'mp4',
           downloadDate: DateTime.now(),
           thumbnailUrl: thumbnailUrl ?? '',
           duration: duration ?? '',
+          originalUrl: url,
         );
-        
-        await downloadProvider.addDownload(downloadItem);
+        if (existingItemId != null) {
+          await downloadProvider.updateDownload(downloadItem);
+        } else {
+          await downloadProvider.addDownload(downloadItem);
+        }
       }
       
       _downloadProgress = DownloadProgress(

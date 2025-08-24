@@ -6,6 +6,7 @@ class DownloadItem {
   final DateTime downloadDate;
   final String thumbnailUrl;
   final String duration;
+  final String originalUrl;
 
   DownloadItem({
     required this.id,
@@ -15,6 +16,7 @@ class DownloadItem {
     required this.downloadDate,
     required this.thumbnailUrl,
     required this.duration,
+    required this.originalUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -25,6 +27,7 @@ class DownloadItem {
         'downloadDate': downloadDate.toIso8601String(),
         'thumbnailUrl': thumbnailUrl,
         'duration': duration,
+        'originalUrl': originalUrl,
       };
 
   factory DownloadItem.fromJson(Map<String, dynamic> json) => DownloadItem(
@@ -35,5 +38,6 @@ class DownloadItem {
         downloadDate: DateTime.parse(json['downloadDate']),
         thumbnailUrl: json['thumbnailUrl'],
         duration: json['duration'],
+        originalUrl: json['originalUrl'] ?? json['url'] ?? '',
       );
 }

@@ -4,6 +4,8 @@ const youtubedl = require('youtube-dl-exec');
 const cors = require('cors');
 const path = require('path');
 const YouTube = require('youtube-sr').default;
+const ffmpegPath = require('ffmpeg-static');
+const { spawn } = require('child_process');
 
 // Basit ytdl seçenekleri
 const ytdlOptions = {
@@ -275,13 +277,14 @@ app.post('/download-mp3', async (req, res) => {
             output: '%(title)s.%(ext)s',
             restrictFilenames: true,
             noPlaylist: true,
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            ffmpegLocation: ffmpegPath
         });
         
         res.json({ 
             success: true, 
             message: 'MP3 indirme başarılı',
-            title: output.title || 'Unknown',
+            title: (typeof output === 'object' && output.title) ? output.title : 'Unknown',
             format: 'mp3'
         });
         
@@ -311,13 +314,14 @@ app.post('/download-mp4', async (req, res) => {
             output: '%(title)s.%(ext)s',
             restrictFilenames: true,
             noPlaylist: true,
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            ffmpegLocation: ffmpegPath
         });
         
         res.json({ 
             success: true, 
             message: 'MP4 indirme başarılı',
-            title: output.title || 'Unknown',
+            title: (typeof output === 'object' && output.title) ? output.title : 'Unknown',
             format: 'mp4',
             quality: quality
         });
@@ -340,114 +344,154 @@ app.post('/api/video-info', async (req, res) => {
             return res.status(400).json({ error: 'URL gerekli' });
         }
 
-        if (!ytdl.validateURL(url)) {
-            return res.status(400).json({ error: 'Geçersiz YouTube URL' });
+        try {
+            const info = await youtubedl(url, {
+                dumpSingleJson: true,
+                noPlaylist: true,
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            });
+
+            const videoDetails = {
+                title: info.title || 'Unknown',
+                thumbnail: info.thumbnail || '',
+                duration: info.duration || 0,
+                author: info.uploader || 'Unknown',
+                viewCount: info.view_count || 0
+            };
+
+            return res.json(videoDetails);
+        } catch (e) {
+            return res.status(500).json({ error: 'Video bilgisi alınamadı' });
         }
-
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        const videoDetails = {
-            title: info.videoDetails.title,
-            thumbnail: info.videoDetails.thumbnails[0]?.url,
-            duration: info.videoDetails.lengthSeconds,
-            author: info.videoDetails.author.name,
-            viewCount: info.videoDetails.viewCount
-        };
-
-        res.json(videoDetails);
     } catch (error) {
         console.error('Video bilgisi alınırken hata:', error);
         res.status(500).json({ error: 'Video bilgisi alınamadı' });
     }
 });
 
-// MP3 indirme
+// MP3 indirme (mobil uygulama için streaming)
 app.post('/api/download-mp3', async (req, res) => {
     try {
         const { url } = req.body;
-        
-        if (!url || !ytdl.validateURL(url)) {
+        if (!url) {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url, ytdlOptions);
-        // Türkçe karakterleri destekleyen dosya adı temizleme
-        const title = info.videoDetails.title
-            .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
-            .replace(/\s+/g, '_') // Boşlukları alt çizgi ile değiştir
-            .substring(0, 100); // Dosya adını 100 karakterle sınırla
-        
-        res.header('Content-Disposition', `attachment; filename="${title}.mp3"`);
-        res.header('Content-Type', 'audio/mpeg');
-        
-        ytdl(url, {
-            ...ytdlOptions,
-            filter: 'audioonly',
-            quality: 'highestaudio'
-        }).pipe(res);
-        
+        // Başlık almak için hızlı info çekelim (dosya adı için)
+        let title = 'audio';
+        try {
+            const info = await youtubedl(url, {
+                dumpSingleJson: true,
+                noPlaylist: true,
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            });
+            title = (info.title || 'audio')
+                .replace(/[^a-zA-Z0-9\s\-_]/g, '') // Sadece alfanumerik karakterler
+                .replace(/\s+/g, '_')
+                .substring(0, 50); // Daha kısa dosya adı
+        } catch (_) {}
+
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Content-Disposition', `attachment; filename="${title}.mp3"`);
+
+        // MP3 indirme için spawn kullan
+        const ytDlpProcess = spawn('yt-dlp', [
+            url,
+            '--extract-audio',
+            '--audio-format', 'mp3',
+            '--audio-quality', '192K',
+            '--output', '-',
+            '--restrict-filenames',
+            '--no-playlist',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            '--ffmpeg-location', ffmpegPath
+        ]);
+
+        ytDlpProcess.stdout.pipe(res);
+        ytDlpProcess.stderr.on('data', (data) => {
+            console.log('yt-dlp stderr:', data.toString());
+        });
+        ytDlpProcess.on('error', (err) => {
+            console.error('MP3 indirme hata (spawn):', err);
+            if (!res.headersSent) res.status(500).json({ error: 'MP3 indirilemedi' });
+        });
+        ytDlpProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error('MP3 indirme süreç kodu:', code);
+            }
+        });
+
     } catch (error) {
         console.error('MP3 indirme hatası:', error);
-        res.status(500).json({ error: 'MP3 indirilemedi' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'MP3 indirilemedi' });
+        }
     }
 });
 
-// MP4 indirme
+// MP4 indirme (mobil uygulama için streaming)
 app.post('/api/download-mp4', async (req, res) => {
     try {
         const { url, quality = 'highest' } = req.body;
-        
-        if (!url || !ytdl.validateURL(url)) {
+        if (!url) {
             return res.status(400).json({ error: 'Geçersiz YouTube URL' });
         }
 
-        const info = await ytdl.getInfo(url, { agent });
-        // Türkçe karakterleri destekleyen dosya adı temizleme
-        const title = info.videoDetails.title
-            .replace(/[<>:"/\\|?*]/g, '') // Dosya sisteminde yasak karakterleri kaldır
-            .replace(/\s+/g, '_') // Boşlukları alt çizgi ile değiştir
-            .substring(0, 100); // Dosya adını 100 karakterle sınırla
-        
-        res.header('Content-Disposition', `attachment; filename="${title}.mp4"`);
-        res.header('Content-Type', 'video/mp4');
-        
-        // Kalite seçim mantığını iyileştir
-        let downloadOptions;
-        
-        if (quality === 'highest') {
-            // En yüksek kaliteyi garantilemek için önce mevcut formatları kontrol et
-            const formats = info.formats
-                .filter(format => format.hasVideo && format.hasAudio && format.container === 'mp4')
-                .sort((a, b) => {
-                    const aHeight = parseInt(a.qualityLabel) || 0;
-                    const bHeight = parseInt(b.qualityLabel) || 0;
-                    return bHeight - aHeight;
-                });
-            
-            if (formats.length > 0) {
-                downloadOptions = {
-                    format: formats[0]
-                };
-            } else {
-                // Fallback: en yüksek kaliteli video + ses ayrı ayrı
-                downloadOptions = {
-                    filter: format => format.hasVideo && format.hasAudio,
-                    quality: 'highestvideo'
-                };
-            }
-        } else {
-            // Spesifik kalite seçimi
-            downloadOptions = {
-                filter: format => format.hasVideo && format.hasAudio && 
-                    (format.qualityLabel === quality || format.quality === quality),
-                quality: quality
-            };
+        // Başlık almak için hızlı info çekelim (dosya adı için)
+        let title = 'video';
+        try {
+            const info = await youtubedl(url, {
+                dumpSingleJson: true,
+                noPlaylist: true,
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            });
+            title = (info.title || 'video')
+                .replace(/[^a-zA-Z0-9\s\-_]/g, '') // Sadece alfanumerik karakterler
+                .replace(/\s+/g, '_')
+                .substring(0, 50); // Daha kısa dosya adı
+        } catch (_) {}
+
+        res.setHeader('Content-Type', 'video/mp4');
+        res.setHeader('Content-Disposition', `attachment; filename="${title}.mp4"`);
+
+        // Format seçimi: mp4 öncelikli
+        let format = 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio/best';
+        if (quality && quality !== 'highest') {
+            // belirli yükseklik tercih ediliyorsa
+            format = `bestvideo[ext=mp4][height<=${quality}]+bestaudio/best[ext=mp4]`;
         }
-        
-        ytdl(url, downloadOptions).pipe(res);
-        
+
+        // MP4 indirme için spawn kullan
+        const ytDlpProcess = spawn('yt-dlp', [
+            url,
+            '--format', format,
+            '--output', '-',
+            '--restrict-filenames',
+            '--no-playlist',
+            '--merge-output-format', 'mp4',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            '--ffmpeg-location', ffmpegPath
+        ]);
+
+        ytDlpProcess.stdout.pipe(res);
+        ytDlpProcess.stderr.on('data', (data) => {
+            console.log('yt-dlp stderr:', data.toString());
+        });
+        ytDlpProcess.on('error', (err) => {
+            console.error('MP4 indirme hata (spawn):', err);
+            if (!res.headersSent) res.status(500).json({ error: 'MP4 indirilemedi' });
+        });
+        ytDlpProcess.on('close', (code) => {
+            if (code !== 0) {
+                console.error('MP4 indirme süreç kodu:', code);
+            }
+        });
+
     } catch (error) {
         console.error('MP4 indirme hatası:', error);
-        res.status(500).json({ error: 'MP4 indirilemedi' });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'MP4 indirilemedi' });
+        }
     }
 });
 
@@ -582,6 +626,7 @@ app.post('/api/search', async (req, res) => {
 
 
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Sunucu http://localhost:${PORT} adresinde çalışıyor`);
+    console.log(`Ağ erişimi: http://192.168.1.14:${PORT}`);
 });

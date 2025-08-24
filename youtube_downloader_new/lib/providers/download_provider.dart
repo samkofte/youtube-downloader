@@ -56,6 +56,18 @@ class DownloadProvider with ChangeNotifier {
     await _saveDownloads();
   }
 
+  // Update an existing download by id (or add if not exists)
+  Future<void> updateDownload(DownloadItem download) async {
+    final index = _downloads.indexWhere((d) => d.id == download.id);
+    if (index >= 0) {
+      _downloads[index] = download;
+    } else {
+      _downloads.insert(0, download);
+    }
+    notifyListeners();
+    await _saveDownloads();
+  }
+
   // Remove a download
   Future<void> removeDownload(String id) async {
     _downloads.removeWhere((download) => download.id == id);

@@ -23,11 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load popular music when app starts
+    // Load trending videos when app starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context
-          .read<YouTubeProvider>()
-          .searchVideos('popüler müzik 2024', maxResults: 20);
+      context.read<YouTubeProvider>().loadTrendingVideos(maxResults: 20);
       context.read<DownloadProvider>().loadDownloads();
     });
   }
@@ -44,10 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _showSearchResults = false;
       });
-      // Load popular music again when search is cleared
-      context
-          .read<YouTubeProvider>()
-          .searchVideos('popüler müzik 2024', maxResults: 20);
+      // Load trending videos again when search is cleared
+      context.read<YouTubeProvider>().loadTrendingVideos(maxResults: 20);
     } else {
       setState(() {
         _showSearchResults = true;
@@ -136,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!_showSearchResults) {
                 context
                     .read<YouTubeProvider>()
-                    .searchVideos('popüler müzik 2024', maxResults: 20);
+                    .loadTrendingVideos(maxResults: 20);
               }
             },
             tooltip: 'Yenile',
@@ -231,8 +227,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   return const LoadingWidget(message: 'Müzikler aranıyor...');
                 }
 
-                // Show search results or popular music
-                final videos = provider.searchResults;
+                // Show search results or trending videos
+                final videos = _showSearchResults
+                    ? provider.searchResults
+                    : provider.trendingVideos;
                 if (videos.isEmpty) {
                   return Center(
                     child: Column(
@@ -247,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text(
                           _showSearchResults
                               ? 'Arama sonucu bulunamadı'
-                              : 'Popüler müzikler yükleniyor...',
+                              : 'Trending videolar yükleniyor...',
                           style:
                               Theme.of(context).textTheme.titleMedium?.copyWith(
                                     color: Colors.grey[600],
@@ -283,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             _showSearchResults
                                 ? 'Arama Sonuçları (${videos.length})'
-                                : 'Popüler Müzikler (${videos.length})',
+                                : 'Trending Videolar (${videos.length})',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
